@@ -3,9 +3,10 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { PageHeader } from "@/components/page-header";
 import { PanelCard } from "@/components/panel-card";
+import { ReservationActionsPanel } from "@/components/reservation-actions-panel";
 import { RiskBadge } from "@/components/risk-badge";
 import { getReservationDetail } from "@/lib/api";
-import { formatPropertyLabel } from "@/lib/presentation";
+import { formatDataSourceLabel, formatPropertyLabel } from "@/lib/presentation";
 
 type ReservationDetailPageProps = {
   params: Promise<{
@@ -24,13 +25,20 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
         <PageHeader
           title={`Rezervasyon #${detail.reservation_id || reservationId}`}
           description="Son skor, yönlendirme bağlamı ve operasyon için gereken temel alanların yer aldığı detay görünümü."
-          badges={[formatPropertyLabel(detail.property_id), detail.distribution_channel ?? "Kanal bilinmiyor", detail.source_file]}
+          badges={[
+            formatPropertyLabel(detail.property_id),
+            detail.distribution_channel ?? "Kanal bilinmiyor",
+            formatDataSourceLabel(detail.data_source),
+          ]}
         />
 
         <div className="section-note">
           <Link className="table-link" href="/reservations">
             Rezervasyon listesine dön
           </Link>
+          <span className="pill">
+            Aksiyon akışı: {detail.action_support_enabled ? "Yazılabilir" : "Read-only"}
+          </span>
         </div>
 
         <section className="metric-grid">
@@ -142,6 +150,14 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
             </div>
           </PanelCard>
         </div>
+
+        <PanelCard title="Aksiyon Geçmişi" subtitle="Manuel müdahale, takip ve kapanış akışı bu panelde tutulur.">
+          <ReservationActionsPanel
+            reservationId={detail.reservation_id}
+            actionSupportEnabled={detail.action_support_enabled}
+            initialActions={detail.actions}
+          />
+        </PanelCard>
       </div>
     </AppShell>
   );

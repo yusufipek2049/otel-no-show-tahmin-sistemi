@@ -306,6 +306,101 @@ class ArtifactViewRepository:
             "items": items,
         }
 
+    @staticmethod
+    def _rate(numerator: int, denominator: int) -> float:
+        if denominator <= 0:
+            return 0.0
+        return numerator / denominator
+
+    def get_operations_summary(self) -> dict[str, Any]:
+        frame = self.get_reservation_view()
+        no_show_count = int((frame["no_show_flag"] == 1).sum())
+        canceled_count = int((frame.get("reservation_status") == "Canceled").sum()) if "reservation_status" in frame else 0
+        total_reservations = int(len(frame))
+        return {
+            "total_reservations": total_reservations,
+            "scored_reservations": int(frame["score"].notna().sum()),
+            "no_show_count": no_show_count,
+            "canceled_count": canceled_count,
+            "no_show_rate": self._rate(no_show_count, total_reservations),
+            "cancellation_rate": self._rate(canceled_count, total_reservations),
+            "high_risk_reservations": int((frame["risk_class"] == "high").sum()),
+            "action_pending_count": 0,
+            "action_completed_count": 0,
+            "action_follow_up_count": 0,
+            "note": "Artifact fallback read-only mode. Action metrics become available after DB persistence.",
+        }
+
+    def get_no_show_trends(self) -> list[dict[str, Any]]:
+        frame = self.get_reservation_view().copy()
+        if "reservation_status" not in frame.columns:
+            frame["reservation_status"] = None
+        frame["period"] = frame["arrival_date"].dt.strftime("%Y-%m").fillna("unknown")
+        grouped = (
+            frame.groupby("period", dropna=False)
+            .agg(
+                total_reservations=("reservation_id", "count"),
+                no_show_count=("no_show_flag", lambda series: int((series == 1).sum())),
+                canceled_count=("reservation_status", lambda series: int((series == "Canceled").sum())),
+            )
+            .reset_index()
+            .sort_values("period")
+        )
+        records = grouped.to_dict(orient="records")
+        for record in records:
+            total = int(record["total_reservations"])
+            record["no_show_rate"] = self._rate(int(record["no_show_count"]), total)
+            record["cancellation_rate"] = self._rate(int(record["canceled_count"]), total)
+        return records
+
+    def get_dimension_breakdown(self, dimension: str) -> list[dict[str, Any]]:
+        if dimension not in {"distribution_channel", "market_segment"}:
+            raise ValueError(f"Unsupported dimension: {dimension}")
+
+        frame = self.get_reservation_view().copy()
+        if "reservation_status" not in frame.columns:
+            frame["reservation_status"] = None
+        frame[dimension] = frame[dimension].fillna("Unknown").replace("", "Unknown")
+        grouped = (
+            frame.groupby(dimension, dropna=False)
+            .agg(
+                total_reservations=("reservation_id", "count"),
+                scored_reservations=("score", lambda series: int(series.notna().sum())),
+                high_risk_reservations=("risk_class", lambda series: int((series == "high").sum())),
+                no_show_count=("no_show_flag", lambda series: int((series == 1).sum())),
+                canceled_count=("reservation_status", lambda series: int((series == "Canceled").sum())),
+                average_score=("score", "mean"),
+            )
+            .reset_index()
+            .rename(columns={dimension: "dimension_value"})
+            .sort_values(["total_reservations", "dimension_value"], ascending=[False, True])
+        )
+        records = grouped.to_dict(orient="records")
+        for record in records:
+            total = int(record["total_reservations"])
+            record["no_show_rate"] = self._rate(int(record["no_show_count"]), total)
+            record["cancellation_rate"] = self._rate(int(record["canceled_count"]), total)
+            if pd.isna(record["average_score"]):
+                record["average_score"] = None
+            else:
+                record["average_score"] = float(record["average_score"])
+        return records
+
+    def get_action_effectiveness(self) -> dict[str, Any]:
+        frame = self.get_reservation_view()
+        high_risk_count = int((frame["risk_class"] == "high").sum())
+        return {
+            "total_actions": 0,
+            "open_actions": 0,
+            "completed_actions": 0,
+            "follow_up_actions": 0,
+            "high_risk_with_action_count": 0,
+            "high_risk_without_action_count": high_risk_count,
+            "status_breakdown": [],
+            "type_breakdown": [],
+            "note": "Artifact fallback read-only mode. Action analytics require DB-backed action logs.",
+        }
+
     def get_benchmark_report(self) -> dict[str, Any]:
         summary = self.get_evaluation_summary()
         comparison = self._load_csv(self.get_paths().model_comparison)

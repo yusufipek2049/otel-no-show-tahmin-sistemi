@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.schemas.actions import ReservationActionCreateRequest, ReservationActionResponse
 from app.schemas.reservations import ReservationDetailResponse, ReservationListResponse
+from app.services.actions import ActionsService
 from app.services.reservations import ReservationService
 
 router = APIRouter()
@@ -35,3 +37,17 @@ def list_reservations(
 @router.get("/{reservation_id}", response_model=ReservationDetailResponse)
 def get_reservation_detail(reservation_id: int, db: Session = Depends(get_db)) -> ReservationDetailResponse:
     return ReservationService(db).get_reservation_detail(reservation_id)
+
+
+@router.get("/{reservation_id}/actions", response_model=list[ReservationActionResponse])
+def list_reservation_actions(reservation_id: int, db: Session = Depends(get_db)) -> list[ReservationActionResponse]:
+    return ActionsService(db).list_reservation_actions(reservation_id)
+
+
+@router.post("/{reservation_id}/actions", response_model=ReservationActionResponse, status_code=201)
+def create_reservation_action(
+    reservation_id: int,
+    payload: ReservationActionCreateRequest,
+    db: Session = Depends(get_db),
+) -> ReservationActionResponse:
+    return ActionsService(db).create_reservation_action(reservation_id, payload)

@@ -33,6 +33,11 @@ def build_latest_prediction_subquery():
     return select(ranked_predictions).where(ranked_predictions.c.prediction_rank == 1).subquery()
 
 
+def prediction_store_has_rows(db: Session) -> bool:
+    stmt = select(func.count()).select_from(Prediction)
+    return bool((db.scalar(stmt) or 0) > 0)
+
+
 def apply_reservation_filters(
     stmt: Select,
     *,
@@ -57,6 +62,9 @@ class ReservationRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.latest_predictions = build_latest_prediction_subquery()
+
+    def has_prediction_data(self) -> bool:
+        return prediction_store_has_rows(self.db)
 
     def list_reservations(
         self,

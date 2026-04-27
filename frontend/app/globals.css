@@ -42,7 +42,8 @@ a {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -274,12 +275,17 @@ select {
 }
 
 .field input,
-.field select {
+.field select,
+.textarea {
   width: 100%;
   padding: 12px 14px;
   background: var(--surface-strong);
   border: 1px solid var(--line);
   border-radius: 14px;
+}
+
+.textarea {
+  resize: vertical;
 }
 
 .button {
@@ -447,6 +453,14 @@ select {
 
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.error-text {
+  color: var(--danger);
+}
+
+.success-text {
+  color: var(--ok);
 }
 
 .table-caption {

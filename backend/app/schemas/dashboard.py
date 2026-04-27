@@ -9,6 +9,9 @@ class DashboardKpis(BaseModel):
     total_reservations: int
     high_risk_reservations: int
     medium_risk_reservations: int
+    action_pending_count: int = 0
+    action_completed_count: int = 0
+    action_follow_up_count: int = 0
     latest_scored_at: datetime | None = None
     active_model_name: str | None = None
     active_model_version: str | None = None
@@ -27,3 +30,6 @@ class DashboardReservationCard(BaseModel):
 class DashboardSummaryResponse(BaseModel):
     kpis: DashboardKpis
     items: list[DashboardReservationCard]
+    data_source: str = "database_bootstrap"
+    scoring_status: str = "awaiting_predictions"
+    action_support_enabled: bool = False

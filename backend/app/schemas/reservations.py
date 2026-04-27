@@ -4,6 +4,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
+from app.schemas.actions import ReservationActionResponse
+
 
 class ReservationListItem(BaseModel):
     reservation_id: int
@@ -59,3 +61,6 @@ class ReservationDetailResponse(BaseModel):
     exclusion_reason: str | None = None
     latest_prediction: ReservationListItem | None = None
     context: ReservationContext | None = None
+    actions: list[ReservationActionResponse] = []
+    data_source: str = "database_bootstrap"
+    action_support_enabled: bool = False

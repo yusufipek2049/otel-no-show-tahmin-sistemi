@@ -1,22 +1,33 @@
 import type {
+  ActionEffectiveness,
   BenchmarkReport,
   DashboardSummary,
+  DimensionBreakdownRow,
+  OperationsSummary,
   ReservationDetail,
+  ReservationAction,
   ReservationListResponse,
+  TrendPoint,
 } from "@/lib/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 const dashboardFallback: DashboardSummary = {
   kpis: {
     total_reservations: 0,
     high_risk_reservations: 0,
     medium_risk_reservations: 0,
+    action_pending_count: 0,
+    action_completed_count: 0,
+    action_follow_up_count: 0,
     latest_scored_at: null,
     active_model_name: null,
     active_model_version: null,
   },
   items: [],
+  data_source: "database_bootstrap",
+  scoring_status: "awaiting_predictions",
+  action_support_enabled: false,
 };
 
 const reservationsFallback: ReservationListResponse = {
@@ -48,7 +59,10 @@ const reservationDetailFallback: ReservationDetail = {
   excluded_from_training: false,
   exclusion_reason: null,
   latest_prediction: null,
+  actions: [],
   context: null,
+  data_source: "database_bootstrap",
+  action_support_enabled: false,
 };
 
 const reportFallback: BenchmarkReport = {
@@ -80,6 +94,38 @@ const reportFallback: BenchmarkReport = {
   comparison: [],
   threshold_tables: {},
   top_k_tables: {},
+};
+
+const operationsSummaryFallback: OperationsSummary = {
+  total_reservations: 0,
+  scored_reservations: 0,
+  no_show_count: 0,
+  canceled_count: 0,
+  no_show_rate: 0,
+  cancellation_rate: 0,
+  high_risk_reservations: 0,
+  action_pending_count: 0,
+  action_completed_count: 0,
+  action_follow_up_count: 0,
+  data_source: "database_bootstrap",
+  action_support_enabled: false,
+  note: "Yönetim özeti henüz hazır değil.",
+};
+
+const trendFallback: TrendPoint[] = [];
+const breakdownFallback: DimensionBreakdownRow[] = [];
+const actionEffectivenessFallback: ActionEffectiveness = {
+  total_actions: 0,
+  open_actions: 0,
+  completed_actions: 0,
+  follow_up_actions: 0,
+  high_risk_with_action_count: 0,
+  high_risk_without_action_count: 0,
+  status_breakdown: [],
+  type_breakdown: [],
+  data_source: "database_bootstrap",
+  action_support_enabled: false,
+  note: "Aksiyon görünümü henüz hazır değil.",
 };
 
 async function safeFetchJson<T>(path: string, fallback: T): Promise<T> {
@@ -125,4 +171,71 @@ export async function getReservationDetail(reservationId: string | number): Prom
 
 export async function getBenchmarkReport(): Promise<BenchmarkReport> {
   return safeFetchJson("/reports/benchmark", reportFallback);
+}
+
+export async function getOperationsSummary(): Promise<OperationsSummary> {
+  return safeFetchJson("/reports/operations-summary", operationsSummaryFallback);
+}
+
+export async function getNoShowTrends(): Promise<TrendPoint[]> {
+  return safeFetchJson("/reports/no-show-trends", trendFallback);
+}
+
+export async function getChannelBreakdown(): Promise<DimensionBreakdownRow[]> {
+  return safeFetchJson("/reports/channel-breakdown", breakdownFallback);
+}
+
+export async function getSegmentBreakdown(): Promise<DimensionBreakdownRow[]> {
+  return safeFetchJson("/reports/segment-breakdown", breakdownFallback);
+}
+
+export async function getActionEffectiveness(): Promise<ActionEffectiveness> {
+  return safeFetchJson("/reports/action-effectiveness", actionEffectivenessFallback);
+}
+
+export async function createReservationAction(
+  reservationId: number,
+  payload: {
+    action_type: string;
+    action_status: string;
+    action_note: string;
+    acted_by: string;
+    payload?: Record<string, unknown>;
+  },
+): Promise<ReservationAction> {
+  const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/actions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Aksiyon kaydedilemedi.");
+  }
+
+  return (await response.json()) as ReservationAction;
+}
+
+export async function updateReservationAction(
+  actionId: number,
+  payload: {
+    action_status?: string;
+    action_note?: string;
+  },
+): Promise<ReservationAction> {
+  const response = await fetch(`${API_BASE_URL}/actions/${actionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("Aksiyon güncellenemedi.");
+  }
+
+  return (await response.json()) as ReservationAction;
 }

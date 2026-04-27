@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.audit import ReservationAction
 from app.models.prediction import Prediction
 from app.models.reservation import ReservationClean
 from app.repositories.reservations import build_latest_prediction_subquery
@@ -32,11 +33,38 @@ class DashboardRepository:
             or 0
         )
         latest_scored_at = self.db.scalar(select(func.max(Prediction.scored_at)))
+        action_pending_count = (
+            self.db.scalar(
+                select(func.count())
+                .select_from(ReservationAction)
+                .where(ReservationAction.action_status == "open")
+            )
+            or 0
+        )
+        action_completed_count = (
+            self.db.scalar(
+                select(func.count())
+                .select_from(ReservationAction)
+                .where(ReservationAction.action_status == "completed")
+            )
+            or 0
+        )
+        action_follow_up_count = (
+            self.db.scalar(
+                select(func.count())
+                .select_from(ReservationAction)
+                .where(ReservationAction.action_status == "follow_up")
+            )
+            or 0
+        )
 
         return {
             "total_reservations": total_reservations,
             "high_risk_reservations": high_risk,
             "medium_risk_reservations": medium_risk,
+            "action_pending_count": action_pending_count,
+            "action_completed_count": action_completed_count,
+            "action_follow_up_count": action_follow_up_count,
             "latest_scored_at": latest_scored_at,
         }
 

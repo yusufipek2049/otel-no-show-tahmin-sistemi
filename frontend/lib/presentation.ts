@@ -29,6 +29,25 @@ const statusLabelMap: Record<string, string> = {
   complete: "Tamamlandı",
 };
 
+const dataSourceLabelMap: Record<string, string> = {
+  database_prediction_store: "DB prediction store",
+  artifact_fallback: "Artifact fallback",
+  database_bootstrap: "Bootstrap",
+};
+
+const actionStatusLabelMap: Record<string, string> = {
+  open: "Açık",
+  completed: "Tamamlandı",
+  follow_up: "Takip gerekli",
+};
+
+const actionTypeLabelMap: Record<string, string> = {
+  call_guest: "Misafiri ara",
+  send_message: "Mesaj gönder",
+  request_deposit: "Depozito iste",
+  manual_review: "Manuel inceleme",
+};
+
 export function formatPropertyLabel(propertyId?: string | null): string {
   if (!propertyId) {
     return "-";
@@ -80,4 +99,16 @@ export function formatCandidateLabel(index: number): string {
 
 export function formatStatusLabel(status: string): string {
   return statusLabelMap[status] ?? status;
+}
+
+export function formatDataSourceLabel(dataSource: string): string {
+  return dataSourceLabelMap[dataSource] ?? dataSource;
+}
+
+export function formatActionStatusLabel(status: string): string {
+  return actionStatusLabelMap[status] ?? status;
+}
+
+export function formatActionTypeLabel(actionType: string): string {
+  return actionTypeLabelMap[actionType] ?? actionType.replaceAll("_", " ");
 }

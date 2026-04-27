@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.repositories.artifact_views import ArtifactViewRepository
-from app.repositories.reservations import ReservationRepository
+from app.repositories.actions import ActionsRepository
+from app.repositories.reservations import ReservationRepository, prediction_store_has_rows
 from app.schemas.reservations import (
     ReservationContext,
     ReservationDetailResponse,
@@ -20,7 +21,20 @@ from app.schemas.reservations import (
 class ReservationService:
     def __init__(self, db: Session) -> None:
         self.repository = ReservationRepository(db)
+        self.actions_repository = ActionsRepository(db)
         self.artifact_repository = ArtifactViewRepository()
+
+    def _resolve_source(self) -> tuple[str, bool]:
+        try:
+            if prediction_store_has_rows(self.repository.db):
+                return "database_prediction_store", True
+        except SQLAlchemyError:
+            pass
+
+        if self.artifact_repository.exists():
+            return "artifact_fallback", False
+
+        return "database_bootstrap", True
 
     def list_reservations(
         self,
@@ -32,7 +46,8 @@ class ReservationService:
         date_to: date | None = None,
         limit: int = 50,
     ) -> ReservationListResponse:
-        if self.artifact_repository.exists():
+        data_source, _ = self._resolve_source()
+        if data_source == "artifact_fallback":
             total, items, filters = self.artifact_repository.list_reservations(
                 property_id=property_id,
                 distribution_channel=distribution_channel,
@@ -74,7 +89,8 @@ class ReservationService:
         )
 
     def get_reservation_detail(self, reservation_id: int) -> ReservationDetailResponse:
-        if self.artifact_repository.exists():
+        data_source, action_support_enabled = self._resolve_source()
+        if data_source == "artifact_fallback":
             detail = self.artifact_repository.get_reservation_detail(reservation_id)
             if detail is None:
                 raise HTTPException(status_code=404, detail="Reservation not found")
@@ -99,6 +115,9 @@ class ReservationService:
                 exclusion_reason=detail["exclusion_reason"],
                 latest_prediction=latest_prediction,
                 context=ReservationContext.model_validate(detail["context"]) if detail.get("context") else None,
+                actions=[],
+                data_source=data_source,
+                action_support_enabled=action_support_enabled,
             )
 
         try:
@@ -128,6 +147,12 @@ class ReservationService:
                 }
             )
 
+        actions = []
+        try:
+            actions = self.actions_repository.list_reservation_actions(reservation_id)
+        except SQLAlchemyError:
+            actions = []
+
         return ReservationDetailResponse(
             reservation_id=detail["reservation_id"],
             property_id=detail["property_id"],
@@ -143,4 +168,20 @@ class ReservationService:
             excluded_from_training=detail["excluded_from_training"],
             exclusion_reason=detail["exclusion_reason"],
             latest_prediction=latest_prediction,
+            actions=[
+                {
+                    "id": action.id,
+                    "reservation_id": action.reservation_clean_id,
+                    "prediction_id": action.prediction_id,
+                    "action_type": action.action_type,
+                    "action_status": action.action_status,
+                    "action_note": action.action_note,
+                    "acted_by": action.acted_by,
+                    "payload": action.payload,
+                    "acted_at": action.acted_at,
+                }
+                for action in actions
+            ],
+            data_source=data_source,
+            action_support_enabled=action_support_enabled,
         )

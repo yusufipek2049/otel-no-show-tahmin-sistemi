@@ -3,11 +3,17 @@ export type DashboardSummary = {
     total_reservations: number;
     high_risk_reservations: number;
     medium_risk_reservations: number;
+    action_pending_count: number;
+    action_completed_count: number;
+    action_follow_up_count: number;
     latest_scored_at: string | null;
     active_model_name: string | null;
     active_model_version: string | null;
   };
   items: ReservationListItem[];
+  data_source: string;
+  scoring_status: string;
+  action_support_enabled: boolean;
 };
 
 export type ReservationListItem = {
@@ -56,12 +62,27 @@ export type ReservationDetail = {
   excluded_from_training: boolean;
   exclusion_reason: string | null;
   latest_prediction: ReservationListItem | null;
+  actions: ReservationAction[];
   context: {
     meal_plan: string | null;
     is_repeated_guest: boolean | null;
     total_special_requests: number | null;
     required_car_parking_spaces: number | null;
   } | null;
+  data_source: string;
+  action_support_enabled: boolean;
+};
+
+export type ReservationAction = {
+  id: number;
+  reservation_id: number;
+  prediction_id: number | null;
+  action_type: string;
+  action_status: string;
+  action_note: string | null;
+  acted_by: string;
+  payload: Record<string, unknown>;
+  acted_at: string;
 };
 
 export type BenchmarkReport = {
@@ -111,4 +132,61 @@ export type BenchmarkReport = {
       recall: number;
     }>
   >;
+};
+
+export type OperationsSummary = {
+  total_reservations: number;
+  scored_reservations: number;
+  no_show_count: number;
+  canceled_count: number;
+  no_show_rate: number;
+  cancellation_rate: number;
+  high_risk_reservations: number;
+  action_pending_count: number;
+  action_completed_count: number;
+  action_follow_up_count: number;
+  data_source: string;
+  action_support_enabled: boolean;
+  note: string | null;
+};
+
+export type TrendPoint = {
+  period: string;
+  total_reservations: number;
+  no_show_count: number;
+  canceled_count: number;
+  no_show_rate: number;
+  cancellation_rate: number;
+};
+
+export type DimensionBreakdownRow = {
+  dimension_value: string;
+  total_reservations: number;
+  scored_reservations: number;
+  high_risk_reservations: number;
+  no_show_count: number;
+  canceled_count: number;
+  no_show_rate: number;
+  cancellation_rate: number;
+  average_score: number | null;
+};
+
+export type ActionEffectiveness = {
+  total_actions: number;
+  open_actions: number;
+  completed_actions: number;
+  follow_up_actions: number;
+  high_risk_with_action_count: number;
+  high_risk_without_action_count: number;
+  status_breakdown: Array<{
+    label: string;
+    count: number;
+  }>;
+  type_breakdown: Array<{
+    label: string;
+    count: number;
+  }>;
+  data_source: string;
+  action_support_enabled: boolean;
+  note: string | null;
 };

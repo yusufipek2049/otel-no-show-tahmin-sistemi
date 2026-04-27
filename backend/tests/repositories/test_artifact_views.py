@@ -184,3 +184,20 @@ def test_artifact_repository_builds_report_payload(tmp_path: Path) -> None:
     assert report["comparison"][0]["pr_auc"] == 0.09
     assert report["threshold_tables"]["logistic_regression"][0]["threshold"] == 0.35
     assert report["top_k_tables"]["logistic_regression"][0]["segment"] == "top_25"
+
+
+def test_artifact_repository_builds_management_payloads(tmp_path: Path) -> None:
+    fixture_root = tmp_path / "latest"
+    _write_artifact_fixture(fixture_root)
+    repository = ArtifactViewRepository(fixture_root)
+
+    summary = repository.get_operations_summary()
+    trends = repository.get_no_show_trends()
+    channel_breakdown = repository.get_dimension_breakdown("distribution_channel")
+    action_effectiveness = repository.get_action_effectiveness()
+
+    assert summary["total_reservations"] == 2
+    assert summary["no_show_count"] == 1
+    assert trends[0]["period"] == "2017-01"
+    assert channel_breakdown[0]["dimension_value"] in {"Direct", "TA/TO"}
+    assert action_effectiveness["total_actions"] == 0

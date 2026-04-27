@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { PanelCard } from "@/components/panel-card";
 import { RiskBadge } from "@/components/risk-badge";
 import { getBenchmarkReport, getDashboardSummary } from "@/lib/api";
-import { formatPropertyLabel } from "@/lib/presentation";
+import { formatDataSourceLabel, formatPropertyLabel } from "@/lib/presentation";
 
 export default async function DashboardPage() {
   const [summary, report] = await Promise.all([getDashboardSummary(), getBenchmarkReport()]);
@@ -24,13 +24,20 @@ export default async function DashboardPage() {
         <PageHeader
           title="Operasyon Özeti"
           description="Güncel risk sinyalleri, skorlama yoğunluğu ve manuel inceleme sırasındaki rezervasyonlar."
-          badges={["İç operasyon ekranı", `${summary.items.length} riskli kayıt`, "Canlı görünüm"]}
+          badges={[
+            "İç operasyon ekranı",
+            `${summary.items.length} riskli kayıt`,
+            formatDataSourceLabel(summary.data_source),
+          ]}
         />
 
         <section className="metric-grid">
           <MetricCard label="Toplam rezervasyon" value={summary.kpis.total_reservations.toString()} />
           <MetricCard label="Yüksek risk" value={summary.kpis.high_risk_reservations.toString()} />
           <MetricCard label="Orta risk" value={summary.kpis.medium_risk_reservations.toString()} />
+          <MetricCard label="Açık aksiyon" value={summary.kpis.action_pending_count.toString()} />
+          <MetricCard label="Tamamlanan" value={summary.kpis.action_completed_count.toString()} />
+          <MetricCard label="Takip gerekli" value={summary.kpis.action_follow_up_count.toString()} />
           <MetricCard
             label="Son skor durumu"
             value={summary.kpis.latest_scored_at ? "Hazır" : "Bekleniyor"}
@@ -66,6 +73,20 @@ export default async function DashboardPage() {
                 {report.recommendation_reason ??
                   "Henüz değerlendirme çıktısı yok. Eğitim hattı çalıştığında bu alan otomatik olarak dolacak."}
               </p>
+              <div className="summary-band">
+                <div className="summary-cell">
+                  Skorlama kaynağı
+                  <strong>{formatDataSourceLabel(summary.data_source)}</strong>
+                </div>
+                <div className="summary-cell">
+                  Skorlama modu
+                  <strong>{summary.scoring_status}</strong>
+                </div>
+                <div className="summary-cell">
+                  Aksiyon akışı
+                  <strong>{summary.action_support_enabled ? "Yazılabilir" : "Read-only"}</strong>
+                </div>
+              </div>
               <div className="section-note">
                 <span className="tag">Not</span>
                 <span className="mono">Bu ekranda model adı gösterilmez.</span>
