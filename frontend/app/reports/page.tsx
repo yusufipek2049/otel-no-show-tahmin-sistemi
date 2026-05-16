@@ -37,7 +37,7 @@ export default async function ReportsPage() {
       <div className="page-grid">
         <PageHeader
           title="Raporlar"
-          description="Operasyon yönetim görünümü ve model benchmark çıktıları birlikte sunulur."
+          description="Operasyon yönetim görünümü ve aktif model kalite çıktıları birlikte sunulur."
           badges={[
             formatDataSourceLabel(operationsSummary.data_source),
             report.selected_threshold ? `Eşik ${report.selected_threshold.toFixed(2)}` : "Eşik yok",
@@ -217,14 +217,14 @@ export default async function ReportsPage() {
           </PanelCard>
         </div>
 
-        <PanelCard title="Karşılaştırma Özeti" subtitle="Güncel adaylar arasındaki temel performans görünümü.">
+        <PanelCard title="Model Kalite Özeti" subtitle="Aktif modelin temel performans görünümü.">
           {report.comparison.length === 0 ? (
-            <div className="empty-state">Henüz karşılaştırma satırı bulunmuyor.</div>
+            <div className="empty-state">Henüz model kalite satırı bulunmuyor.</div>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Aday</th>
+                  <th>Model</th>
                   <th>PR-AUC</th>
                   <th>ROC-AUC</th>
                   <th>Eşikte kesinlik</th>
@@ -316,7 +316,7 @@ export default async function ReportsPage() {
           </PanelCard>
         </div>
 
-        <PanelCard title="Aday Durumları" subtitle="Hızlı tarama için kısa durum kartları.">
+        <PanelCard title="Model Durumları" subtitle="Hızlı tarama için kısa durum kartları.">
           <div className="status-list">
             {report.models.map((model, index) => (
               <article key={model.model_name} className="status-item">

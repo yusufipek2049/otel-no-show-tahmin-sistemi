@@ -88,7 +88,7 @@ class ArtifactViewRepository:
 
     def get_recommended_model_name(self) -> str:
         summary = self.get_evaluation_summary()
-        return str(summary.get("recommended_model", "logistic_regression"))
+        return str(summary.get("recommended_model", "catboost_with_logistic_score"))
 
     def get_recommended_model_version(self) -> str | None:
         summary = self.get_evaluation_summary()
@@ -172,7 +172,7 @@ class ArtifactViewRepository:
             "distribution_channels": sorted(
                 frame["distribution_channel"].dropna().astype(str).unique().tolist()
             ),
-            "risk_classes": ["high", "medium", "low"],
+            "risk_classes": ["high", "medium", "notable", "low"],
             "min_arrival_date": arrival_dates.min().date() if not arrival_dates.empty else None,
             "max_arrival_date": arrival_dates.max().date() if not arrival_dates.empty else None,
             "model_name": self.get_recommended_model_name(),
@@ -277,7 +277,7 @@ class ArtifactViewRepository:
 
     def get_dashboard_summary(self, limit: int = 12) -> dict[str, Any]:
         frame = self.get_reservation_view()
-        risky = frame.loc[frame["risk_class"].isin(["high", "medium"])].copy()
+        risky = frame.loc[frame["risk_class"].isin(["high", "medium", "notable"])].copy()
         risky = risky.sort_values(["score", "arrival_date", "reservation_id"], ascending=[False, False, True])
         latest_scored_at = frame["scored_at"].dropna()
 
@@ -441,8 +441,8 @@ class ArtifactViewRepository:
         if recommended_model and recommended_model in highlight_lookup:
             row = highlight_lookup[recommended_model]
             recommendation_reason = (
-                f"Recommended by latest artifact because it leads on PR-AUC "
-                f"({row['pr_auc']:.3f}) under the current selection policy."
+                f"Active calibrated no-show model loaded from latest artifact "
+                f"(F1 {row['f1']:.3f}, PR-AUC {row['pr_auc']:.3f})."
             )
 
         return {

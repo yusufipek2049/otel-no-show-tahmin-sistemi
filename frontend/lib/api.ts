@@ -36,7 +36,7 @@ const reservationsFallback: ReservationListResponse = {
   filters: {
     property_ids: [],
     distribution_channels: [],
-    risk_classes: ["high", "medium", "low"],
+    risk_classes: ["high", "medium", "notable", "low"],
     min_arrival_date: null,
     max_arrival_date: null,
     model_name: null,
@@ -73,18 +73,9 @@ const reportFallback: BenchmarkReport = {
   recommendation_reason: null,
   models: [
     {
-      model_name: "logistic_regression",
+      model_name: "catboost_with_logistic_score",
       status: "planned",
-      notes: "İlk iskelet hazır. Eğitim hattı tamamlandığında değerlendirme metrikleri burada görünecek.",
-      metrics: [
-        { name: "pr_auc", value: null, status: "pending" },
-        { name: "roc_auc", value: null, status: "pending" },
-      ],
-    },
-    {
-      model_name: "catboost",
-      status: "planned",
-      notes: "Veri aktarımı ve leakage güvenli özellik seti tamamlandığında öne çıkan tablo adayı.",
+      notes: "CatBoost, Logistic Regression skorunu besleyici feature olarak kullanacak şekilde planlandı.",
       metrics: [
         { name: "pr_auc", value: null, status: "pending" },
         { name: "roc_auc", value: null, status: "pending" },
@@ -169,8 +160,9 @@ export async function getReservationDetail(reservationId: string | number): Prom
   return safeFetchJson(`/reservations/${reservationId}`, reservationDetailFallback);
 }
 
-export async function getBenchmarkReport(): Promise<BenchmarkReport> {
-  return safeFetchJson("/reports/benchmark", reportFallback);
+export async function getBenchmarkReport(stage?: string): Promise<BenchmarkReport> {
+  const query = stage ? `?stage=${encodeURIComponent(stage)}` : "";
+  return safeFetchJson(`/reports/benchmark${query}`, reportFallback);
 }
 
 export async function getOperationsSummary(): Promise<OperationsSummary> {

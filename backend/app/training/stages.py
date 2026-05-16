@@ -7,12 +7,14 @@ from pathlib import Path
 from app.training.constants import (
     BASE_MODEL_FEATURE_COLUMNS,
     CATEGORICAL_FEATURE_COLUMNS,
+    CUSTOMER_SIGNAL_COLUMNS,
     DEFAULT_ARTIFACTS_ROOT,
     ENGINEERED_FEATURE_COLUMNS,
     EXCLUDED_INTERNAL_COLUMNS,
     EXCLUDED_SOURCE_COLUMNS,
     FEATURE_SET_VERSION,
     NUMERIC_FEATURE_COLUMNS,
+    RESERVATION_OPERATIONAL_SIGNAL_COLUMNS,
 )
 
 
@@ -21,7 +23,9 @@ def _unique_tuple(values: tuple[str, ...]) -> tuple[str, ...]:
 
 
 class ModelStage(str, Enum):
+    CUSTOMER_PRE_RESERVATION = "customer_pre_reservation"
     BOOKING_TIME = "booking_time"
+    RESERVATION_POST_BOOKING = "reservation_post_booking"
     POST_BOOKING_DAY_1 = "post_booking_day_1"
     POST_BOOKING_DAY_2 = "post_booking_day_2"
     POST_BOOKING_DAY_3 = "post_booking_day_3"
@@ -172,6 +176,119 @@ BOOKING_TIME_POLICY = StageFeaturePolicy(
     excluded_internal_columns=tuple(EXCLUDED_INTERNAL_COLUMNS),
 )
 
+CUSTOMER_PRE_RESERVATION_BASE_FEATURE_COLUMNS: tuple[str, ...] = (
+    "property_id",
+    "country_code",
+    "market_segment",
+    "distribution_channel",
+    "is_repeated_guest",
+    "previous_cancellations",
+    "previous_non_cancelled_bookings",
+    "customer_type",
+)
+
+CUSTOMER_PRE_RESERVATION_ENGINEERED_FEATURE_COLUMNS: tuple[str, ...] = (
+    "previous_cancel_ratio",
+    *tuple(CUSTOMER_SIGNAL_COLUMNS),
+)
+
+CUSTOMER_PRE_RESERVATION_NUMERIC_FEATURE_COLUMNS: tuple[str, ...] = _unique_tuple(
+    (
+        "is_repeated_guest",
+        "previous_cancellations",
+        "previous_non_cancelled_bookings",
+        "previous_cancel_ratio",
+        "customer_history_depth",
+        "customer_no_show_pressure_score",
+        "payment_failure_count",
+        "has_recent_payment_failure",
+        "prior_message_count",
+        "prior_call_count",
+        "last_contact_response_score",
+        "campaign_exposure_count",
+        "campaign_discount_rate",
+        "guarantee_strength_score",
+    )
+)
+
+CUSTOMER_PRE_RESERVATION_CATEGORICAL_FEATURE_COLUMNS: tuple[str, ...] = (
+    "property_id",
+    "country_code",
+    "market_segment",
+    "distribution_channel",
+    "customer_type",
+    "customer_identity_bucket",
+    "channel_campaign_family",
+    "guarantee_type_detail",
+)
+
+RESERVATION_POST_BOOKING_BASE_FEATURE_COLUMNS: tuple[str, ...] = (
+    *tuple(BASE_MODEL_FEATURE_COLUMNS),
+)
+
+RESERVATION_POST_BOOKING_ENGINEERED_FEATURE_COLUMNS: tuple[str, ...] = (
+    *tuple(ENGINEERED_FEATURE_COLUMNS),
+    *tuple(CUSTOMER_SIGNAL_COLUMNS),
+    *tuple(RESERVATION_OPERATIONAL_SIGNAL_COLUMNS),
+)
+
+RESERVATION_POST_BOOKING_NUMERIC_FEATURE_COLUMNS: tuple[str, ...] = _unique_tuple(
+    (
+        *tuple(NUMERIC_FEATURE_COLUMNS),
+        "customer_history_depth",
+        "customer_no_show_pressure_score",
+        "payment_failure_count",
+        "has_recent_payment_failure",
+        "prior_message_count",
+        "prior_call_count",
+        "last_contact_response_score",
+        "campaign_exposure_count",
+        "campaign_discount_rate",
+        "guarantee_strength_score",
+        "last_minute_behavior_flag",
+        "late_night_booking_flag",
+        "reservation_payment_retry_count",
+        "payment_failed_after_booking",
+        "guest_message_count_after_booking",
+        "guest_response_delay_hours",
+        "confirmation_contact_success",
+        "channel_campaign_active",
+        "channel_campaign_pressure_score",
+        "guarantee_verified_flag",
+        "days_to_arrival_at_scoring",
+    )
+)
+
+RESERVATION_POST_BOOKING_CATEGORICAL_FEATURE_COLUMNS: tuple[str, ...] = _unique_tuple(
+    (
+        *tuple(CATEGORICAL_FEATURE_COLUMNS),
+        "customer_identity_bucket",
+        "channel_campaign_family",
+        "guarantee_type_detail",
+        "deposit_collection_status",
+    )
+)
+
+CUSTOMER_PRE_RESERVATION_POLICY = StageFeaturePolicy(
+    feature_set_version="customer_pre_reservation_v1",
+    base_feature_columns=CUSTOMER_PRE_RESERVATION_BASE_FEATURE_COLUMNS,
+    engineered_feature_columns=CUSTOMER_PRE_RESERVATION_ENGINEERED_FEATURE_COLUMNS,
+    numeric_feature_columns=CUSTOMER_PRE_RESERVATION_NUMERIC_FEATURE_COLUMNS,
+    categorical_feature_columns=CUSTOMER_PRE_RESERVATION_CATEGORICAL_FEATURE_COLUMNS,
+    excluded_source_columns=tuple(EXCLUDED_SOURCE_COLUMNS),
+    excluded_internal_columns=tuple(EXCLUDED_INTERNAL_COLUMNS),
+)
+
+RESERVATION_POST_BOOKING_POLICY = StageFeaturePolicy(
+    feature_set_version="reservation_post_booking_v1",
+    base_feature_columns=RESERVATION_POST_BOOKING_BASE_FEATURE_COLUMNS,
+    engineered_feature_columns=RESERVATION_POST_BOOKING_ENGINEERED_FEATURE_COLUMNS,
+    numeric_feature_columns=RESERVATION_POST_BOOKING_NUMERIC_FEATURE_COLUMNS,
+    categorical_feature_columns=RESERVATION_POST_BOOKING_CATEGORICAL_FEATURE_COLUMNS,
+    excluded_source_columns=tuple(EXCLUDED_SOURCE_COLUMNS),
+    excluded_internal_columns=tuple(EXCLUDED_INTERNAL_COLUMNS),
+)
+
 POST_BOOKING_FEATURE_POLICIES = {
     stage: StageFeaturePolicy(
         feature_set_version=f"{stage.value}_v1",
@@ -191,6 +308,14 @@ POST_BOOKING_FEATURE_POLICIES = {
 }
 
 MODEL_STAGE_CONFIGS = {
+    ModelStage.CUSTOMER_PRE_RESERVATION: ModelStageConfig(
+        stage=ModelStage.CUSTOMER_PRE_RESERVATION,
+        description="Customer-level no-show propensity model before a specific reservation is finalized.",
+        requires_snapshot_data=False,
+        split_year_column="arrival_year",
+        snapshot_day_offset=None,
+        feature_policy=CUSTOMER_PRE_RESERVATION_POLICY,
+    ),
     ModelStage.BOOKING_TIME: ModelStageConfig(
         stage=ModelStage.BOOKING_TIME,
         description="Booking-time no-show model that only uses fields available at reservation creation.",
@@ -198,6 +323,14 @@ MODEL_STAGE_CONFIGS = {
         split_year_column="arrival_year",
         snapshot_day_offset=0,
         feature_policy=BOOKING_TIME_POLICY,
+    ),
+    ModelStage.RESERVATION_POST_BOOKING: ModelStageConfig(
+        stage=ModelStage.RESERVATION_POST_BOOKING,
+        description="Reservation-level no-show model after booking using synthetic operational signals.",
+        requires_snapshot_data=False,
+        split_year_column="arrival_year",
+        snapshot_day_offset=1,
+        feature_policy=RESERVATION_POST_BOOKING_POLICY,
     ),
     ModelStage.POST_BOOKING_DAY_1: ModelStageConfig(
         stage=ModelStage.POST_BOOKING_DAY_1,

@@ -1,40 +1,80 @@
-# Hotel Chain No-Show Prediction System
+# Hotel No-Show Prediction and Operations Dashboard
 
-Bu repo, otel zinciri için geliştirilen iç kullanım odaklı **booking-time no-show prediction** sistemidir.
+End-to-end hotel no-show prediction system with leakage-safe feature engineering, temporal validation, calibrated risk scoring, threshold and Top-K evaluation, DB-backed prediction persistence, artifact fallback views, model documentation, tests, and CI.
 
-Mevcut kapsam:
+The project is framed as an applied ML engineering system: it connects model training to an operational dashboard where hotel teams can prioritize risky reservations and record follow-up actions.
 
-- **V1**: no-show modelleme hattı + operasyon dashboardu
-- **V2 başlangıcı**: no-show sistemine doğal olarak ait yönetim / iş raporları
+## Project Purpose
 
-Kapsam dışı:
+Hotels lose operational capacity and revenue when guests do not arrive without canceling. A useful no-show system should do more than train a classifier: it should produce auditable risk scores, explain the data availability policy, evaluate operational thresholds, persist predictions, and expose the results in workflows that operations teams can actually use.
 
-- traffic / spend / ROAS / CPC / CTR dashboardları
-- marketing attribution
-- generic revenue BI ürünü
+This repository implements that path:
 
-Bağlayıcı kapsam özeti için:
+- FastAPI backend
+- PostgreSQL schema and Alembic migration
+- training pipeline with artifact generation
+- DB-backed prediction store
+- artifact fallback mode for local demos
+- Next.js operations dashboard
+- reservation detail and action workflow
+- management reports
+- model card, dataset card, and research-style documentation
 
-- `docs/v1-v2-gap-analysis.md`
+## Problem Definition
 
-## Current Product State
+The primary ML task is binary no-show prediction:
 
-Şu anda repo aşağıdaki uçtan uca parçaları içerir:
+- positive class: `ReservationStatus == "No-Show"`
+- negative class: `ReservationStatus == "Check-Out"`
+- excluded from no-show training: `ReservationStatus == "Canceled"`
 
-- booking-time no-show eğitim hattı
-- artifact üretimi
-- prediction persistence için veri modeli
-- operasyon dashboardu
-- riskli rezervasyon listesi
-- rezervasyon detay görünümü
-- aksiyon oluşturma / güncelleme akışı
-- benchmark rapor ekranı
-- ilk yönetim raporları:
-  - no-show trendi
-  - cancellation vs no-show özeti
-  - kanal bazlı kırılım
-  - segment bazlı kırılım
-  - aksiyon etkisi özeti
+Canceled reservations are a different business outcome and should be modeled separately if needed.
+
+The active stages are:
+
+- `customer_pre_reservation`: customer-level no-show propensity before a specific reservation is finalized
+- `reservation_post_booking`: reservation-level no-show risk after a booking exists
+
+The legacy `booking_time` stage is retained for compatibility and leakage-safe baseline work.
+
+## Why It Matters
+
+No-show prediction is operationally valuable only when it supports a concrete action:
+
+- contact the guest
+- verify guarantee or deposit details
+- prioritize manual review
+- manage overbooking risk
+- measure action coverage and outcomes
+
+For that reason, this project evaluates not only ranking metrics, but also threshold behavior, action volume, Top-K capture, calibration, and persistence into a prediction store.
+
+## Current Model Decision
+
+Active final model architecture:
+
+- `catboost_with_logistic_score`
+
+Logistic Regression is not presented as a separate production candidate. It is used as an internal feeder:
+
+- train a Logistic Regression feeder
+- generate `logistic_regression_score`
+- pass that score into CatBoost
+- calibrate CatBoost probabilities with isotonic regression
+
+Score semantics:
+
+- score is direct no-show probability
+- higher score means higher no-show risk
+- do not use `1.0 - score`
+
+Current threshold policy:
+
+- action threshold: `0.90`
+- high risk: `>= 0.80`
+- medium risk: `>= 0.67`
+- notable risk: `>= 0.50`
+- low risk: `< 0.50`
 
 ## Architecture
 
@@ -59,80 +99,137 @@ Bağlayıcı kapsam özeti için:
 │   ├── app
 │   ├── components
 │   └── lib
+├── .github
+│   └── workflows
 └── docker-compose.yml
 ```
 
-Backend katmanları:
+## Backend Structure
 
-- `api/`: route tanımları
-- `services/`: iş akışı orchestration
-- `repositories/`: veri erişimi
-- `models/`: ORM modelleri
-- `schemas/`: request / response sözleşmeleri
-- `training/`: eğitim, split, evaluation, persistence
+- `app/api`: FastAPI route definitions
+- `app/core`: configuration
+- `app/db`: SQLAlchemy session and base setup
+- `app/models`: ORM models
+- `app/repositories`: data access and artifact views
+- `app/schemas`: Pydantic response/request contracts
+- `app/services`: application workflow orchestration
+- `app/training`: ingestion, feature engineering, split, evaluation, model training, and persistence
+- `app/jobs/train_booking_time_no_show.py`: CLI training entrypoint
 
-## Database Schema
+## Frontend Structure
 
-İlk migration şu ana tabloları kurar:
+- `frontend/app/dashboard`: operations summary and risky reservation queue
+- `frontend/app/customer-risk`: customer-level pre-reservation risk view
+- `frontend/app/reservation-risk`: post-booking reservation risk view
+- `frontend/app/reservations`: filterable reservation queue
+- `frontend/app/reservations/[reservationId]`: reservation detail and action workflow
+- `frontend/app/reports`: management and model quality reports
+- `frontend/components`: shared UI components
+- `frontend/lib`: API client, types, and presentation helpers
 
-- `reservation_import_batches`
-- `reservation_import_errors`
-- `reservations_raw`
-- `reservations_clean`
-- `reservation_features`
-- `predictions`
-- `reservation_actions`
-- `audit_logs`
+## Training Pipeline
 
-Tasarım mantığı:
+The training pipeline:
 
-- ham veri korunur
-- clean katman hedefe yakın ama modelden dışlanacak alanları da saklayabilir
-- feature katmanı booking-time-safe feature seti için ayrıdır
-- predictions katmanı operasyon ekranlarını besler
-- reservation actions katmanı manuel müdahaleyi kaydeder
+1. Loads raw reservation data.
+2. Normalizes strings and null-like values.
+3. Builds clean reservation records.
+4. Constructs the no-show target.
+5. Excludes canceled rows from no-show training.
+6. Builds stage-specific features.
+7. Applies leakage guards.
+8. Uses temporal train/test split.
+9. Trains the Logistic Regression feeder.
+10. Trains CatBoost with the feeder score.
+11. Applies isotonic calibration.
+12. Writes model, prediction, and report artifacts.
 
-## Scoring and Data Source Model
+Key files:
 
-Uygulama operasyon ekranlarını iki moddan biriyle besler:
+- `backend/app/training/ingestion.py`
+- `backend/app/training/features.py`
+- `backend/app/training/stages.py`
+- `backend/app/training/split.py`
+- `backend/app/training/evaluation.py`
+- `backend/app/training/pipeline.py`
+- `backend/app/training/persistence.py`
 
-1. **DB prediction store**
-   - `predictions` tablosunda persistence edilmiş skorlar varsa bu kaynak tercih edilir
-   - aksiyon yazma akışı bu modda aktiftir
+## Leakage Policy
 
-2. **Artifact fallback**
-   - DB tarafında prediction store hazır değilse son training artifact okunur
-   - bu mod read-only kabul edilir
-   - dashboard ve reports yine çalışır ama action analytics sınırlıdır
+Hard exclusions:
 
-Bu seçim özellikle `/dashboard`, `/reservations/[id]` ve `/reports` ekranlarında görünür hale getirilmiştir.
+- `ReservationStatus`
+- `ReservationStatusDate`
+- `IsCanceled`
+- `no_show_flag`
 
-## Environment
+Canceled rows are excluded from the binary no-show training dataset.
 
-Örnek environment dosyası:
+Final-state operational fields must not be used for earlier scoring cutoffs unless they are available as timestamped as-of features.
 
-```bash
-cp .env.example .env
-```
+Detailed policy:
 
-Önemli değişkenler:
+- `docs/feature-policy.md`
+- `docs/data-mapping.md`
+- `docs/dataset-card.md`
 
-- `DATABASE_URL`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_PORT`
-- `NEXT_PUBLIC_API_BASE_URL`
+## Evaluation Methodology
 
-## How To Run
+Random split is not used for headline model quality claims.
 
-### 1. PostgreSQL başlat
+Current temporal split:
+
+- train: 2015-2016
+- test: 2017
+
+Primary evaluation outputs are generated after a training run:
+
+- PR-AUC
+- ROC-AUC
+- precision / recall / F1 at threshold
+- actioned count
+- recall at Top-K
+- Brier score
+- calibration table
+- feature percentiles
+- feature drift report
+- threshold policy report
+- stacking summary
+
+Generated files are written under each stage's artifact directory.
+
+## Database-Backed Prediction Store
+
+The database schema supports:
+
+- raw imports
+- clean reservations
+- reservation features
+- predictions
+- reservation actions
+- audit logs
+
+If prediction rows exist in the database, the app uses the DB-backed prediction store as the primary source for operational screens.
+
+## Artifact Fallback Mode
+
+If the database does not contain persisted predictions, the app can read the latest training artifacts directly.
+
+Default operational fallback:
+
+- `backend/artifacts/booking_time_no_show/reservation_post_booking/latest`
+
+This mode is useful for local demos and model inspection, but it is read-only for action analytics.
+
+## Local Setup
+
+### 1. Start PostgreSQL
 
 ```bash
 docker compose up -d postgres
 ```
 
-### 2. Backend kur ve migrate et
+### 2. Create backend environment
 
 ```bash
 cd backend
@@ -143,12 +240,12 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Backend varsayılan adresleri:
+Backend defaults:
 
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
 
-### 3. Frontend kur ve çalıştır
+### 3. Start frontend
 
 ```bash
 cd frontend
@@ -156,13 +253,73 @@ npm install
 npm run dev
 ```
 
-Frontend varsayılan adresi:
+Frontend default:
 
 - `http://localhost:3000`
 
-## Main API Endpoints
+Environment variable used by the frontend:
 
-Çekirdek endpointler:
+- `NEXT_PUBLIC_API_BASE_URL`, defaulting to `http://localhost:8000/api/v1`
+
+## Train Models
+
+The script downloads public H1/H2 CSVs when `--download-if-missing` is provided and local files are absent.
+
+Train the customer-level stage:
+
+```bash
+cd backend
+python3 -m app.jobs.train_booking_time_no_show \
+  --model-stage customer_pre_reservation \
+  --download-if-missing
+```
+
+Train the reservation-level stage:
+
+```bash
+cd backend
+python3 -m app.jobs.train_booking_time_no_show \
+  --model-stage reservation_post_booking \
+  --download-if-missing
+```
+
+Persist reservation-stage predictions to PostgreSQL:
+
+```bash
+cd backend
+python3 -m app.jobs.train_booking_time_no_show \
+  --model-stage reservation_post_booking \
+  --download-if-missing \
+  --database-url "postgresql+psycopg://postgres:postgres@localhost:5432/hotel_no_show"
+```
+
+## Artifacts
+
+Active stage artifacts:
+
+- `backend/artifacts/booking_time_no_show/customer_pre_reservation/latest/`
+- `backend/artifacts/booking_time_no_show/reservation_post_booking/latest/`
+
+Typical outputs:
+
+- `datasets/reservations_clean.csv`
+- `datasets/reservation_features.csv`
+- `models/catboost_with_logistic_score.cbm`
+- `models/logistic_regression_feeder.joblib`
+- `models/catboost_probability_calibrator.joblib`
+- `predictions/catboost_with_logistic_score_predictions.csv`
+- `reports/evaluation_summary.json`
+- `reports/model_comparison.csv`
+- `reports/*_threshold_metrics.csv`
+- `reports/*_top_k_metrics.csv`
+- `reports/*_calibration.csv`
+- `reports/feature_percentiles.csv`
+- `reports/feature_drift.csv`
+- `reports/risk_thresholds.json`
+- `reports/threshold_policy.json`
+- `reports/stacking_summary.json`
+
+## Main API Endpoints
 
 - `GET /api/v1/health`
 - `GET /api/v1/dashboard/summary`
@@ -171,10 +328,9 @@ Frontend varsayılan adresi:
 - `GET /api/v1/reservations/{reservation_id}/actions`
 - `POST /api/v1/reservations/{reservation_id}/actions`
 - `PATCH /api/v1/actions/{action_id}`
-
-Benchmark ve yönetim raporları:
-
 - `GET /api/v1/reports/benchmark`
+- `GET /api/v1/reports/benchmark?stage=customer_pre_reservation`
+- `GET /api/v1/reports/benchmark?stage=reservation_post_booking`
 - `GET /api/v1/reports/operations-summary`
 - `GET /api/v1/reports/no-show-trends`
 - `GET /api/v1/reports/channel-breakdown`
@@ -184,125 +340,15 @@ Benchmark ve yönetim raporları:
 ## Frontend Routes
 
 - `/dashboard`
-  - operasyon özeti
-  - riskli rezervasyon listesi
-  - aksiyon sayacı
-  - scoring source görünümü
-
+- `/customer-risk`
+- `/reservation-risk`
 - `/reservations`
-  - filtrelenebilir rezervasyon kuyruğu
-
 - `/reservations/[reservationId]`
-  - rezervasyon detay görünümü
-  - son skor
-  - güvenli bağlamsal alanlar
-  - aksiyon ekleme / güncelleme / geçmişi
-
 - `/reports`
-  - benchmark görünümü
-  - no-show yönetim raporları
 
-## Training Pipeline
+## Tests And CI
 
-Booking-time no-show eğitim hattı modüler olarak hazırdır:
-
-- ingestion: `backend/app/training/ingestion.py`
-- cleaning / mapping: `backend/app/training/features.py`
-- temporal split: `backend/app/training/split.py`
-- evaluation: `backend/app/training/evaluation.py`
-- persistence: `backend/app/training/persistence.py`
-- CLI entrypoint: `backend/app/jobs/train_booking_time_no_show.py`
-
-### Booking-time modeli çalıştır
-
-Yerelde `H1.csv` ve `H2.csv` yoksa script public kopyayı indirebilir.
-
-```bash
-cd backend
-python3 -m pip install --user -r requirements.txt
-python3 -m app.jobs.train_booking_time_no_show --model-stage booking_time --download-if-missing
-```
-
-### Prediction store'u DB'ye yaz
-
-```bash
-cd backend
-python3 -m app.jobs.train_booking_time_no_show \
-  --model-stage booking_time \
-  --download-if-missing \
-  --database-url "postgresql+psycopg://postgres:postgres@localhost:5432/hotel_no_show"
-```
-
-Bu akış:
-
-- raw / clean / feature katmanını
-- model prediction çıktılarını
-
-DB tarafına persist eder. Uygulama daha sonra operasyon ekranlarında bunu **DB prediction store** olarak kullanır.
-
-### Üretilen artifact yapısı
-
-- `backend/artifacts/booking_time_no_show/<timestamp>/`
-- `backend/artifacts/booking_time_no_show/latest/`
-
-Başlıca çıktılar:
-
-- `datasets/reservations_clean.csv`
-- `datasets/reservation_features.csv`
-- `reports/import_summary.json`
-- `reports/split_summary.json`
-- `reports/model_comparison.csv`
-- `reports/evaluation_summary.json`
-- `reports/*_threshold_metrics.csv`
-- `reports/*_top_k_metrics.csv`
-- `reports/*_calibration.csv`
-- `predictions/logistic_regression_predictions.csv`
-- `predictions/catboost_predictions.csv`
-
-### Snapshot tabanlı post-booking stage eğitimi
-
-`post_booking_day_1` ila `post_booking_day_4` stage'leri için `H1.csv` / `H2.csv` yeterli değildir; canonical snapshot CSV gerekir.
-
-Örnek:
-
-```bash
-cd backend
-python3 -m app.jobs.train_booking_time_no_show \
-  --model-stage post_booking_day_1 \
-  --snapshot-path /absolute/path/to/post_booking_day_1_snapshots.csv
-```
-
-Notlar:
-
-- post-booking stage artifact’leri ayrı klasör altında yazılır
-- bu stage'lerde DB persistence henüz açık değildir
-- snapshot sözleşmesi `docs/modeling-plan.md` ile uyumlu olmalıdır
-
-## Feature and Leakage Policy
-
-Training code şu kuralları uygular:
-
-- `ReservationStatus`, `ReservationStatusDate`, `IsCanceled` feature setine girmez
-- `BookingChanges`, `DaysInWaitingList`, `AssignedRoomType` booking-time modelde kullanılmaz
-- `Canceled` kayıtları ilk no-show eğitim setinden çıkarılır
-- split kuralı zaman bazlıdır: train `2015-2016`, test `2017`
-
-Detay için:
-
-- `docs/feature-policy.md`
-- `docs/modeling-plan.md`
-- `docs/evaluation.md`
-
-## Development Notes
-
-- Aksiyon yazma akışı yalnızca DB-backed kullanım modunda anlamlıdır; artifact fallback read-only kabul edilir.
-- Yönetim raporları intentionally no-show sistemine doğal kırılımlarla sınırlıdır.
-- Revenue / traffic / marketing BI kapsamı bu repo için hedef değildir.
-- Auth ve role-based access henüz tamamlanmış değildir.
-
-## Validation
-
-Backend doğrulama:
+Backend:
 
 ```bash
 cd backend
@@ -310,29 +356,49 @@ pytest
 python3 -m compileall app
 ```
 
-Frontend doğrulama:
+Frontend:
 
 ```bash
 cd frontend
 npm run typecheck
+npm run build
 ```
 
-## Key Docs
+CI:
 
-- `AGENTS.md`
-- `PLANS.md`
-- `docs/v1-v2-gap-analysis.md`
+- `.github/workflows/ci.yml`
+
+The CI workflow installs backend and frontend dependencies, runs backend tests, compiles backend modules, type-checks the frontend, and builds the Next.js app.
+
+## Documentation
+
+- `docs/research-report.md`
+- `docs/model-training-decision-record.md`
+- `docs/model-card.md`
+- `docs/dataset-card.md`
 - `docs/modeling-plan.md`
 - `docs/feature-policy.md`
-- `docs/data-mapping.md`
 - `docs/evaluation.md`
+- `docs/model-tierlist.md`
+- `docs/data-mapping.md`
+- `docs/v1-v2-gap-analysis.md`
 - `docs/acceptance-criteria.md`
 
-## Short Roadmap
+## Limitations
 
-Yakın vadede mantıklı sıradaki işler:
+- The public H1/H2 dataset is a final-state extract, not a full event log.
+- Payment failure, contact history, campaign, and guarantee/deposit signals are synthetic proxies in the proof-of-concept.
+- Production use requires timestamped PMS, CRM, payment, campaign, and action outcome data.
+- Auth and role-based access are not complete.
+- Artifact fallback is useful for demos but should not replace DB-backed scoring in production.
+- Current metrics should be read from generated artifacts after a training run; this README intentionally avoids hard-coded metric claims.
 
-1. scoring akışını batch/live kullanım açısından daha net operationalize etmek
-2. aksiyon analitiğini zenginleştirmek
-3. yönetim raporlarında period comparison ve drill-down eklemek
-4. auth / role-based access tarafını tamamlamak
+## Roadmap
+
+1. Replace synthetic operational signals with real timestamped source data.
+2. Add a dedicated batch/live scoring job separate from training.
+3. Persist active stage predictions to the database by default.
+4. Add role-based access control.
+5. Track action outcomes, not only action status.
+6. Add drift, calibration, and threshold monitoring over time.
+7. Add deeper period-over-period management reports.

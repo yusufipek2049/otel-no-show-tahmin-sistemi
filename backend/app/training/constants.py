@@ -84,14 +84,25 @@ EXCLUDED_INTERNAL_COLUMNS = [
 ]
 
 FEATURE_SET_VERSION = "booking_time_v1"
-ACTION_THRESHOLD = 0.35
-HIGH_RISK_THRESHOLD = 0.50
+ACTION_THRESHOLD = 0.90
+RISK_CLASS_BANDS = (
+    # Edit this tuple to change no-show risk score labeling.
+    # score is the raw no-show probability, so higher scores mean higher risk.
+    # The first matching minimum_score wins.
+    {"minimum_score": 0.80, "risk_class": "high", "label": "Yüksek riskli"},
+    {"minimum_score": 0.67, "risk_class": "medium", "label": "Orta riskli"},
+    {"minimum_score": 0.50, "risk_class": "notable", "label": "Kayda değer riskli"},
+)
 TRAIN_YEARS = (2015, 2016)
 TEST_YEARS = (2017,)
-THRESHOLDS = (0.10, 0.20, 0.30, 0.35, 0.40, 0.50, 0.60, 0.70)
+THRESHOLDS = (0.50, 0.67, 0.80, 0.90, 0.95)
 TOP_K_VALUES = (25, 50, 100)
 TOP_PERCENT_VALUES = (0.05, 0.10)
 CALIBRATION_BIN_COUNT = 10
+STACKING_CV_FOLDS = 3
+CALIBRATION_METHOD = "isotonic"
+THRESHOLD_SELECTION_POLICY = "fixed_action_threshold"
+OPERATIONAL_ACTION_CAPACITY = 50
 
 # Bootstrap assumption: July and August are the clearest peak-season months
 # across the public H1/H2 dataset.
@@ -141,6 +152,37 @@ ENGINEERED_FEATURE_COLUMNS = [
 ]
 
 MODEL_FEATURE_COLUMNS = BASE_MODEL_FEATURE_COLUMNS + ENGINEERED_FEATURE_COLUMNS
+
+CUSTOMER_SIGNAL_COLUMNS = [
+    "customer_identity_bucket",
+    "customer_history_depth",
+    "customer_no_show_pressure_score",
+    "payment_failure_count",
+    "has_recent_payment_failure",
+    "prior_message_count",
+    "prior_call_count",
+    "last_contact_response_score",
+    "channel_campaign_family",
+    "campaign_exposure_count",
+    "campaign_discount_rate",
+    "guarantee_type_detail",
+    "guarantee_strength_score",
+]
+
+RESERVATION_OPERATIONAL_SIGNAL_COLUMNS = [
+    "last_minute_behavior_flag",
+    "late_night_booking_flag",
+    "reservation_payment_retry_count",
+    "payment_failed_after_booking",
+    "guest_message_count_after_booking",
+    "guest_response_delay_hours",
+    "confirmation_contact_success",
+    "channel_campaign_active",
+    "channel_campaign_pressure_score",
+    "guarantee_verified_flag",
+    "deposit_collection_status",
+    "days_to_arrival_at_scoring",
+]
 
 NUMERIC_FEATURE_COLUMNS = [
     "lead_time_days",

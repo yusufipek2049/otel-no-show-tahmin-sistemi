@@ -2,11 +2,13 @@ import Link from "next/link";
 
 type AppShellProps = {
   children: React.ReactNode;
-  currentRoute: "/dashboard" | "/reservations" | "/reports";
+  currentRoute: "/dashboard" | "/customer-risk" | "/reservation-risk" | "/reservations" | "/reports";
 };
 
 const navigation = [
   { href: "/dashboard", label: "Genel Bakış" },
+  { href: "/customer-risk", label: "Müşteri Riski" },
+  { href: "/reservation-risk", label: "Rezervasyon Riski" },
   { href: "/reservations", label: "Rezervasyonlar" },
   { href: "/reports", label: "Raporlar" },
 ] as const;

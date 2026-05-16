@@ -13,7 +13,7 @@ from app.training.stages import ModelStage, ensure_snapshot_support, get_model_s
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train no-show models for booking-time or later snapshot-based stages.")
+    parser = argparse.ArgumentParser(description="Train staged no-show models.")
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR, help="Directory containing H1.csv and H2.csv.")
     parser.add_argument(
         "--model-stage",

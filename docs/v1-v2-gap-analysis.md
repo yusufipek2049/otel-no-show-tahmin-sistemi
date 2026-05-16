@@ -1,219 +1,94 @@
 # V1 / V2 Gap Analysis
 
-## Amaç
+## Scope
 
-Bu doküman, mevcut uygulamanın no-show tahmin sistemi olarak hangi seviyede olduğunu ve bir sonraki genişleme için hangi boşlukların kaldığını netleştirir.
+This repository is a no-show prediction and operations support system.
 
-Buradaki çerçeve:
+In scope:
 
-- **V1**: booking-time no-show prediction + operasyon dashboardu
-- **V2**: yönetim / iş dashboardu
+- staged no-show risk scoring
+- risk queues
+- reservation detail
+- action logging
+- no-show operations reporting
+- model quality reporting
 
----
+Out of scope:
 
-## V1 Tanımı
+- traffic analytics
+- ad spend / ROAS / CPC / CTR
+- generic revenue BI
+- marketing attribution without additional data sources
 
-V1 kapsamında sistemin aşağıdakileri sağlaması beklenir:
+## V1 Definition
 
-- rezervasyon verisini ingest edip temizleyebilmesi
-- booking-time-safe feature seti üretebilmesi
-- en az bir baseline ve bir güçlü aday model eğitebilmesi
-- prediction çıktısı üretebilmesi
-- operasyon ekibine riskli rezervasyon listesini gösterebilmesi
-- rezervasyon detay ekranı sunabilmesi
-- temel raporlama ve değerlendirme çıktıları gösterebilmesi
+V1 means:
 
----
+- ingest hotel reservation data
+- build leakage-safe feature tables
+- train active no-show stages
+- produce persisted predictions or artifact fallback views
+- show operational risk queues
+- allow action creation and update when DB-backed
+- expose concise model quality summaries
 
-## V1 Mevcut Durum
+## Current V1 Status
 
-### Var olanlar
+Mostly present:
 
-- Eğitim hattı mevcut:
-  - ingestion
-  - feature build
-  - temporal split
-  - evaluation
-  - artifact üretimi
-- Temel veri modeli mevcut:
-  - `reservations_raw`
-  - `reservations_clean`
-  - `reservation_features`
-  - `predictions`
-  - `reservation_actions`
-- Backend API omurgası mevcut:
-  - `GET /api/v1/dashboard/summary`
-  - `GET /api/v1/reservations`
-  - `GET /api/v1/reservations/{reservation_id}`
-  - `GET /api/v1/reports/benchmark`
-- Frontend operasyon ekranları mevcut:
-  - `/dashboard`
-  - `/reservations`
-  - `/reservations/[reservationId]`
-  - `/reports`
-- Dashboard ekranı aşağıdaki çekirdek sinyalleri gösteriyor:
-  - toplam rezervasyon
-  - high risk rezervasyon sayısı
-  - medium risk rezervasyon sayısı
-  - son skorlama durumu
-  - son riskli rezervasyon listesi
-- Rezervasyon listesi filtrelenebilir:
-  - otel
-  - kanal
-  - risk sınıfı
-  - tarih aralığı
-- Rezervasyon detay ekranı mevcut:
-  - son skor
-  - risk etiketi
-  - giriş tarihi
-  - rezervasyon bağlamı
-  - bazı güvenli operasyon alanları
-- Rapor ekranı model değerlendirme çıktıları gösterebiliyor:
-  - PR-AUC
-  - ROC-AUC
-  - precision / recall / F1
-  - threshold tablosu
-  - top-k yakalama
-  - Brier score
+- ingestion
+- clean data layer
+- feature generation
+- temporal split
+- `catboost_with_logistic_score` training
+- logistic feeder score
+- isotonic calibration
+- artifact persistence
+- dashboard
+- reservations list
+- reservation detail
+- action create / update flow
+- customer risk page
+- reservation risk page
+- reports page
 
-### Eksik olanlar
+Still weak or incomplete:
 
-- Ayrı ve açık bir **live scoring / inference job** görünmüyor.
-- Sistem daha çok eğitim artifact’lerinden veya persistence edilmiş prediction kayıtlarından besleniyor.
-- `reservation_actions` tablosu var ama aksiyon oluşturma / güncelleme API’si görünmüyor.
-- Frontend tarafında aksiyon formu, aksiyon geçmişi ve operasyon kapanış akışı yok.
-- Dashboard’ta “aksiyon bekleyen”, “işlenen”, “tekrar kontrol edilecek” gibi operasyon durum alanları yok.
-- Auth ve role-based access henüz scaffold seviyesinde veya eksik.
+- true live scoring job is not separated from training strongly enough
+- artifact fallback is read-only
+- auth and role-based access are not complete
+- real CRM/payment/contact/campaign/deposit data is not connected
+- synthetic operational signals must be replaced before production claims
 
-### V1 Kararı
+## V2 Definition
 
-Mevcut repo, V1’in önemli kısmını karşılıyor; ancak V1 tam bitmiş sayılmaz.
+V2 means management visibility on top of the operational no-show system.
 
-Pratik değerlendirme:
+Currently present:
 
-- **Modelleme ve değerlendirme tarafı:** büyük ölçüde mevcut
-- **Operasyon görünürlüğü:** mevcut
-- **Operasyon aksiyon akışı:** eksik
-- **Canlı kullanım akışı:** eksik / belirsiz
+- operations summary
+- no-show trend
+- cancellation vs no-show summary
+- channel breakdown
+- segment breakdown
+- action effectiveness proxy
 
----
+Still missing:
 
-## V1 İçin Kalan İşler
+- period-over-period comparisons
+- deeper drill-downs
+- model drift trend UI
+- action outcome labels tied to real intervention results
+- production monitoring and alerting
 
-V1’i tamamlanmış saymak için öncelikli işler:
+## Current Decision
 
-1. Prediction üretimini yalnızca training artifact akışından ayırıp net bir scoring akışı tanımla.
-2. `reservation_actions` için write endpoint’leri ekle.
-3. Rezervasyon detay ekranına aksiyon ekleme ve aksiyon geçmişi alanı koy.
-4. Dashboard’a aksiyon durumu özetleri ekle.
-5. Operasyonel kullanım için temel audit görünürlüğünü artır.
+The product is past the old "only benchmark page" state.
 
-Önerilen minimum API genişlemeleri:
+The current gap is not "add more candidate models." The current gap is:
 
-- `POST /api/v1/reservations/{reservation_id}/actions`
-- `GET /api/v1/reservations/{reservation_id}/actions`
-- gerekirse `PATCH /api/v1/actions/{action_id}`
-
----
-
-## V2 Tanımı
-
-V2 kapsamında sistem artık sadece riskli rezervasyon listesi veren operasyon aracı olmaktan çıkar ve yönetim / iş görünürlüğü de sunar.
-
-Bu seviyede beklenen örnek çıktılar:
-
-- no-show rate trendi
-- cancellation vs no-show karşılaştırması
-- kanal bazlı no-show görünümü
-- segment bazlı risk / kayıp görünümü
-- otel bazlı performans farkları
-- tahmini gelir kaybı veya proxy loss metrikleri
-- aksiyonların etkisi
-
----
-
-## V2 Mevcut Durum
-
-### Var olanlar
-
-- `/reports` ekranı mevcut.
-- Backend benchmark endpoint’i mevcut.
-- Evaluation artifact’lerinden gelen karşılaştırma, threshold ve top-k tabloları gösterilebiliyor.
-
-### Var olmayanlar
-
-- Yönetim odaklı aggregate dashboard yok.
-- No-show trend analizi yok.
-- Cancellation vs no-show kıyası yok.
-- Kanal bazlı aggregate no-show dashboard’u yok.
-- Segment bazlı yönetim ekranı yok.
-- Tahmini gelir kaybı metriği yok.
-- Aksiyon etkisi raporu yok.
-- Drift / dönemsel kalite takibi ekranı yok.
-
-### V2 Kararı
-
-Mevcut `/reports` ekranı bir **yönetim dashboard’u değil**, bir **model benchmark ekranı**dır.
-
-Bu yüzden V2 henüz başlamış sayılmaz.
-
----
-
-## V2 İçin Gerekli İşler
-
-Önerilen ilk genişleme başlıkları:
-
-1. Yönetim dashboard’u için ayrı aggregate endpoint’ler tasarla.
-2. No-show ve cancellation kırılımlarını hesaplayan repository sorguları ekle.
-3. `/reports` sayfasını ikiye ayır:
-   - model benchmark görünümü
-   - yönetim / iş görünümü
-4. Gelir kaybı metriği için veri sözleşmesini netleştir.
-5. Aksiyon etkisi takibi için `reservation_actions` verisini raporlama tarafına bağla.
-
-Önerilen endpoint örnekleri:
-
-- `GET /api/v1/reports/operations-summary`
-- `GET /api/v1/reports/no-show-trends`
-- `GET /api/v1/reports/channel-breakdown`
-- `GET /api/v1/reports/segment-breakdown`
-- `GET /api/v1/reports/action-effectiveness`
-
----
-
-## Scope Notu
-
-Burada önemli ayrım şudur:
-
-- **No-show sistemine doğal olarak ait dashboardlar**:
-  - risk kuyruğu
-  - no-show trendi
-  - kanal / segment bazlı risk
-  - tahmini kayıp
-  - aksiyon etkisi
-- **Ayrı veri ekosistemi gerektiren dashboardlar**:
-  - sessions
-  - users
-  - spend
-  - CPC
-  - CTR
-  - ROAS
-  - traffic funnel
-  - campaign attribution
-
-İkinci grup mevcut rezervasyon veri modeliyle doğal olarak gelmez; ek veri kaynakları gerekir.
-
----
-
-## Sonuç
-
-Mevcut repo için özet karar:
-
-- **V1:** kısmen hazır, ama operasyon aksiyon katmanı ve net scoring akışı eksik
-- **V2:** henüz mevcut değil; şu an yalnızca benchmark rapor ekranı var
-
-En doğru ilerleme sırası:
-
-1. V1 operasyon akışını tamamla
-2. Yönetim dashboard’unu V2 olarak ekle
-3. Marketing / traffic / spend tarzı dashboardları ancak veri sözleşmesi genişlediğinde değerlendir
+1. connect real operational event data
+2. separate training from scoring
+3. harden persistence and auth
+4. monitor drift and action outcomes over time
+5. validate the two active stages on real operational data

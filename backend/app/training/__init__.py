@@ -1,1 +1,1 @@
-"""Training pipeline package for booking-time no-show modeling."""
+"""Training pipeline package for staged no-show modeling."""

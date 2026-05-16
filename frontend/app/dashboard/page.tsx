@@ -8,13 +8,15 @@ import { RiskBadge } from "@/components/risk-badge";
 import { getBenchmarkReport, getDashboardSummary } from "@/lib/api";
 import { formatDataSourceLabel, formatPropertyLabel } from "@/lib/presentation";
 
+const DEFAULT_ACTION_THRESHOLD = 0.9;
+
 export default async function DashboardPage() {
   const [summary, report] = await Promise.all([getDashboardSummary(), getBenchmarkReport()]);
   const recommendedModel = report.recommended_model ?? summary.kpis.active_model_name ?? "pending";
   const topKRows = recommendedModel ? report.top_k_tables[recommendedModel] ?? [] : [];
   const thresholdRows = recommendedModel ? report.threshold_tables[recommendedModel] ?? [] : [];
   const top50 = topKRows.find((row) => row.segment === "top_50");
-  const actionThreshold = report.selected_threshold ?? 0.35;
+  const actionThreshold = report.selected_threshold ?? DEFAULT_ACTION_THRESHOLD;
   const thresholdSnapshot =
     thresholdRows.find((row) => Math.abs(row.threshold - actionThreshold) < 0.0001) ?? thresholdRows[0];
 
@@ -50,7 +52,7 @@ export default async function DashboardPage() {
             <div className="summary-band">
               <div className="summary-cell">
                 Eşik
-                <strong>{(report.selected_threshold ?? 0).toFixed(2)}</strong>
+                <strong>{actionThreshold.toFixed(2)}</strong>
               </div>
               <div className="summary-cell">
                 Eşikte kesinlik

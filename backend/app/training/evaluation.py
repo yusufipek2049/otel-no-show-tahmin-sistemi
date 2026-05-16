@@ -14,7 +14,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from app.training.constants import ACTION_THRESHOLD, CALIBRATION_BIN_COUNT, HIGH_RISK_THRESHOLD, TOP_K_VALUES, TOP_PERCENT_VALUES
+from app.training.constants import ACTION_THRESHOLD, CALIBRATION_BIN_COUNT, RISK_CLASS_BANDS, TOP_K_VALUES, TOP_PERCENT_VALUES
 
 
 def _safe_float(value: Any) -> float | None:
@@ -147,8 +147,7 @@ def build_calibration_table(
 
 
 def score_to_risk_class(score: float) -> str:
-    if score >= HIGH_RISK_THRESHOLD:
-        return "high"
-    if score >= ACTION_THRESHOLD:
-        return "medium"
+    for band in RISK_CLASS_BANDS:
+        if score >= float(band["minimum_score"]):
+            return str(band["risk_class"])
     return "low"

@@ -12,12 +12,22 @@ from app.schemas.reports import (
     OperationsSummaryResponse,
     TrendPoint,
 )
+from app.training.constants import DEFAULT_ARTIFACTS_ROOT
+from app.training.stages import ModelStage
 
 
 class ReportsService:
     def __init__(self, db: Session) -> None:
         self.repository = ReportsRepository(db)
-        self.artifact_repository = ArtifactViewRepository()
+        self.artifact_repository = ArtifactViewRepository(
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+        )
+
+    def _artifact_repository_for_stage(self, stage: str | None) -> ArtifactViewRepository:
+        resolved_stage = stage or ModelStage.RESERVATION_POST_BOOKING.value
+        if resolved_stage == ModelStage.BOOKING_TIME.value:
+            return ArtifactViewRepository(DEFAULT_ARTIFACTS_ROOT / "latest")
+        return ArtifactViewRepository(DEFAULT_ARTIFACTS_ROOT / resolved_stage / "latest")
 
     def _reporting_source(self) -> tuple[str, bool]:
         try:
@@ -31,9 +41,10 @@ class ReportsService:
 
         return "database_bootstrap", False
 
-    def get_benchmark_report(self) -> BenchmarkReportResponse:
-        if self.artifact_repository.exists():
-            return BenchmarkReportResponse.model_validate(self.artifact_repository.get_benchmark_report())
+    def get_benchmark_report(self, stage: str | None = None) -> BenchmarkReportResponse:
+        artifact_repository = self._artifact_repository_for_stage(stage)
+        if artifact_repository.exists():
+            return BenchmarkReportResponse.model_validate(artifact_repository.get_benchmark_report())
         return BenchmarkReportResponse.model_validate(self.repository.get_bootstrap_benchmark_report())
 
     def get_operations_summary(self) -> OperationsSummaryResponse:

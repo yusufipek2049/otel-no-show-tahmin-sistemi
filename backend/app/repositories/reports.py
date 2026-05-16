@@ -11,6 +11,7 @@ from app.models.audit import ReservationAction
 from app.models.reservation import ReservationClean
 from app.repositories.reservations import build_latest_prediction_subquery, prediction_store_has_rows
 from app.training.constants import DEFAULT_ARTIFACTS_ROOT
+from app.training.stages import ModelStage
 
 
 class ReportsRepository:
@@ -213,7 +214,13 @@ class ReportsRepository:
         }
 
     def get_bootstrap_benchmark_report(self) -> dict[str, object]:
-        latest_summary_path = DEFAULT_ARTIFACTS_ROOT / "latest" / "reports" / "evaluation_summary.json"
+        latest_summary_path = (
+            DEFAULT_ARTIFACTS_ROOT
+            / ModelStage.RESERVATION_POST_BOOKING.value
+            / "latest"
+            / "reports"
+            / "evaluation_summary.json"
+        )
         if latest_summary_path.exists():
             summary = json.loads(latest_summary_path.read_text(encoding="utf-8"))
             models = []
@@ -240,25 +247,18 @@ class ReportsRepository:
                 "split_strategy": "time-based split: train on 2015-2016, test on 2017",
                 "primary_metrics": ["pr_auc", "roc_auc", "precision", "recall", "f1", "brier_score"],
                 "models": models,
+                "recommended_model": summary.get("recommended_model"),
+                "selected_threshold": summary.get("selected_threshold"),
             }
 
         return {
             "split_strategy": "time-based split planned (train on earlier periods, validate on later periods)",
-            "primary_metrics": ["pr_auc", "roc_auc", "precision", "recall", "f1", "calibration"],
+            "primary_metrics": ["pr_auc", "roc_auc", "precision", "recall", "f1", "brier_score"],
             "models": [
                 {
-                    "model_name": "logistic_regression",
+                    "model_name": "catboost_with_logistic_score",
                     "status": "planned",
-                    "notes": "Bootstrap scaffold only. Training pipeline lands in a later task.",
-                    "metrics": [
-                        {"name": "pr_auc", "value": None, "status": "pending"},
-                        {"name": "roc_auc", "value": None, "status": "pending"},
-                    ],
-                },
-                {
-                    "model_name": "catboost",
-                    "status": "planned",
-                    "notes": "CatBoost remains the primary tabular candidate once ingestion and features are wired.",
+                    "notes": "CatBoost is the active model; Logistic Regression is used only as an internal feeder score.",
                     "metrics": [
                         {"name": "pr_auc", "value": None, "status": "pending"},
                         {"name": "roc_auc", "value": None, "status": "pending"},

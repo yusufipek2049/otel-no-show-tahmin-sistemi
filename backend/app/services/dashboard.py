@@ -7,12 +7,16 @@ from app.repositories.artifact_views import ArtifactViewRepository
 from app.repositories.dashboard import DashboardRepository
 from app.repositories.reservations import prediction_store_has_rows
 from app.schemas.dashboard import DashboardKpis, DashboardSummaryResponse
+from app.training.constants import DEFAULT_ARTIFACTS_ROOT
+from app.training.stages import ModelStage
 
 
 class DashboardService:
     def __init__(self, db: Session) -> None:
         self.repository = DashboardRepository(db)
-        self.artifact_repository = ArtifactViewRepository()
+        self.artifact_repository = ArtifactViewRepository(
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+        )
 
     def _resolve_source(self) -> tuple[str, str, bool]:
         try:

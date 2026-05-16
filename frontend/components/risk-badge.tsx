@@ -10,7 +10,11 @@ export function RiskBadge({ riskClass }: RiskBadgeProps) {
   }
 
   const className = `risk-badge ${
-    riskClass === "high" ? "risk-high" : riskClass === "medium" ? "risk-medium" : "risk-low"
+    riskClass === "high"
+      ? "risk-high"
+      : riskClass === "medium" || riskClass === "notable"
+        ? "risk-medium"
+        : "risk-low"
   }`;
 
   return <span className={className}>{formatRiskLabel(riskClass)}</span>;

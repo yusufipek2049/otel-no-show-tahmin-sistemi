@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -17,8 +17,11 @@ router = APIRouter()
 
 
 @router.get("/benchmark", response_model=BenchmarkReportResponse)
-def get_benchmark_report(db: Session = Depends(get_db)) -> BenchmarkReportResponse:
-    return ReportsService(db).get_benchmark_report()
+def get_benchmark_report(
+    stage: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> BenchmarkReportResponse:
+    return ReportsService(db).get_benchmark_report(stage=stage)
 
 
 @router.get("/operations-summary", response_model=OperationsSummaryResponse)

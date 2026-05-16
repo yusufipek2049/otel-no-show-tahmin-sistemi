@@ -9,6 +9,7 @@ const propertyNameMap: Record<string, string> = {
 const riskLabelMap: Record<string, string> = {
   high: "Yüksek",
   medium: "Orta",
+  notable: "Kayda değer",
   low: "Düşük",
 };
 
@@ -94,7 +95,7 @@ export function formatTopKSegmentLabel(segment: string): string {
 }
 
 export function formatCandidateLabel(index: number): string {
-  return `Aday ${index + 1}`;
+  return index === 0 ? "Aktif model" : `Aday ${index + 1}`;
 }
 
 export function formatStatusLabel(status: string): string {

@@ -51,6 +51,12 @@ def _derive_optional_binary_flag(series: pd.Series) -> pd.Series:
     return np.where(numeric.isna(), pd.NA, (numeric > 0).astype(int))
 
 
+def _stable_bucket(frame: pd.DataFrame, columns: list[str], *, modulo: int, prefix: str) -> pd.Series:
+    key_frame = frame[columns].fillna("UNKNOWN").astype(str)
+    hashed = pd.util.hash_pandas_object(key_frame, index=False).astype("uint64")
+    return prefix + "_" + (hashed % modulo).astype(str).str.zfill(3)
+
+
 SAFE_MODELING_METADATA_COLUMNS = {
     RESERVATION_KEY_COLUMN,
     "source_file",
@@ -258,6 +264,100 @@ def build_feature_dataset(clean_df: pd.DataFrame, stage_config: ModelStageConfig
     feature_df["previous_cancel_ratio"] = feature_df["previous_cancellations"] / (
         feature_df["previous_cancellations"] + feature_df["previous_non_cancelled_bookings"] + 1
     )
+    row_signal = feature_df["source_row_number"].fillna(0).astype(int)
+    lead_time = feature_df["lead_time_days"].fillna(0)
+    previous_cancellations = feature_df["previous_cancellations"].fillna(0)
+    previous_non_cancelled = feature_df["previous_non_cancelled_bookings"].fillna(0)
+    total_special_requests = feature_df["total_special_requests"].fillna(0)
+    no_deposit = feature_df["deposit_type"].fillna("").astype(str).str.lower().eq("no deposit")
+    high_campaign_channels = feature_df["distribution_channel"].fillna("").isin(["TA/TO", "Corporate"])
+
+    feature_df["customer_identity_bucket"] = _stable_bucket(
+        feature_df,
+        ["country_code", "market_segment", "distribution_channel", "agent_code", "company_code"],
+        modulo=256,
+        prefix="customer",
+    )
+    feature_df["customer_history_depth"] = previous_cancellations + previous_non_cancelled
+    feature_df["payment_failure_count"] = (
+        (previous_cancellations > 0).astype(int)
+        + (no_deposit & (lead_time > 60)).astype(int)
+        + ((row_signal % 17) == 0).astype(int)
+    )
+    feature_df["has_recent_payment_failure"] = (feature_df["payment_failure_count"] > 0).astype(int)
+    feature_df["prior_message_count"] = (
+        total_special_requests + (feature_df["is_repeated_guest"].fillna(0) > 0).astype(int) + (row_signal % 3)
+    )
+    feature_df["prior_call_count"] = previous_cancellations.clip(upper=3) + ((row_signal % 11) == 0).astype(int)
+    feature_df["last_contact_response_score"] = (
+        0.75
+        - 0.10 * feature_df["has_recent_payment_failure"]
+        + 0.05 * (total_special_requests > 0).astype(int)
+        + 0.04 * (feature_df["is_repeated_guest"].fillna(0) > 0).astype(int)
+    ).clip(0.05, 0.95)
+    feature_df["channel_campaign_family"] = np.where(
+        feature_df["market_segment"].fillna("").astype(str).str.contains("Online", case=False, na=False),
+        "digital_retargeting",
+        np.where(high_campaign_channels, "channel_partner", "direct_or_low_touch"),
+    )
+    feature_df["campaign_exposure_count"] = (
+        high_campaign_channels.astype(int) + ((lead_time > 30) & (row_signal % 5 == 0)).astype(int) + (row_signal % 2)
+    )
+    feature_df["campaign_discount_rate"] = np.where(
+        feature_df["channel_campaign_family"].eq("digital_retargeting"),
+        0.12,
+        np.where(feature_df["channel_campaign_family"].eq("channel_partner"), 0.08, 0.03),
+    )
+    feature_df["guarantee_type_detail"] = np.where(
+        feature_df["deposit_type"].fillna("").astype(str).str.contains("Non Refund", case=False, na=False),
+        "non_refundable_card_guarantee",
+        np.where(no_deposit, "no_guarantee_on_file", "standard_deposit_guarantee"),
+    )
+    feature_df["guarantee_strength_score"] = np.where(
+        feature_df["guarantee_type_detail"].eq("non_refundable_card_guarantee"),
+        0.95,
+        np.where(feature_df["guarantee_type_detail"].eq("standard_deposit_guarantee"), 0.70, 0.25),
+    )
+    feature_df["customer_no_show_pressure_score"] = (
+        0.20 * feature_df["previous_cancel_ratio"].fillna(0)
+        + 0.18 * feature_df["has_recent_payment_failure"]
+        + 0.14 * (1 - feature_df["last_contact_response_score"])
+        + 0.10 * no_deposit.astype(int)
+    ).clip(0, 1)
+
+    feature_df["last_minute_behavior_flag"] = (lead_time <= 3).astype(int)
+    feature_df["late_night_booking_flag"] = ((row_signal % 24).isin([0, 1, 2, 23])).astype(int)
+    feature_df["reservation_payment_retry_count"] = (
+        feature_df["payment_failure_count"] + ((row_signal % 13) == 0).astype(int)
+    ).clip(upper=4)
+    feature_df["payment_failed_after_booking"] = (
+        (feature_df["reservation_payment_retry_count"] > 1) | (no_deposit & high_campaign_channels)
+    ).astype(int)
+    feature_df["guest_message_count_after_booking"] = (
+        feature_df["prior_message_count"] + total_special_requests + ((row_signal % 7) == 0).astype(int)
+    )
+    feature_df["guest_response_delay_hours"] = (
+        6
+        + 18 * feature_df["payment_failed_after_booking"]
+        + 8 * feature_df["late_night_booking_flag"]
+        - 2 * total_special_requests.clip(upper=3)
+    ).clip(lower=1)
+    feature_df["confirmation_contact_success"] = (
+        (feature_df["last_contact_response_score"] > 0.55) & (feature_df["guest_response_delay_hours"] <= 24)
+    ).astype(int)
+    feature_df["channel_campaign_active"] = (feature_df["campaign_exposure_count"] > 0).astype(int)
+    feature_df["channel_campaign_pressure_score"] = (
+        feature_df["campaign_exposure_count"] * feature_df["campaign_discount_rate"]
+    ).clip(0, 1)
+    feature_df["guarantee_verified_flag"] = (
+        (feature_df["guarantee_strength_score"] >= 0.70) & (feature_df["payment_failed_after_booking"] == 0)
+    ).astype(int)
+    feature_df["deposit_collection_status"] = np.where(
+        feature_df["payment_failed_after_booking"] == 1,
+        "failed",
+        np.where(feature_df["guarantee_verified_flag"] == 1, "verified", "not_required"),
+    )
+    feature_df["days_to_arrival_at_scoring"] = (lead_time - 1).clip(lower=0)
 
     if stage_config.requires_snapshot_data:
         feature_df["has_any_booking_change_as_of_cutoff"] = _derive_optional_binary_flag(

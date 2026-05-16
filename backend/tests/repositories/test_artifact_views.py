@@ -67,13 +67,13 @@ def _write_artifact_fixture(root: Path) -> None:
                 "source_row_number": 1,
                 "arrival_date": "2017-01-01",
                 "actual_no_show_flag": 1,
-                "feature_set_version": "booking_time_v1",
+                "feature_set_version": "reservation_post_booking_v1",
                 "split_name": "test",
-                "model_name": "logistic_regression",
-                "model_version": "logreg_fixture",
-                "score": 0.81,
+                "model_name": "catboost_with_logistic_score",
+                "model_version": "catboost_stack_fixture",
+                "score": 0.91,
                 "risk_class": "high",
-                "threshold_used": 0.35,
+                "threshold_used": 0.90,
                 "scoring_run_id": "fixture-run",
                 "scored_at": "2026-04-12T00:00:00+00:00",
             },
@@ -83,32 +83,32 @@ def _write_artifact_fixture(root: Path) -> None:
                 "source_row_number": 2,
                 "arrival_date": "2017-01-05",
                 "actual_no_show_flag": 0,
-                "feature_set_version": "booking_time_v1",
+                "feature_set_version": "reservation_post_booking_v1",
                 "split_name": "test",
-                "model_name": "logistic_regression",
-                "model_version": "logreg_fixture",
+                "model_name": "catboost_with_logistic_score",
+                "model_version": "catboost_stack_fixture",
                 "score": 0.22,
                 "risk_class": "low",
-                "threshold_used": 0.35,
+                "threshold_used": 0.90,
                 "scoring_run_id": "fixture-run",
                 "scored_at": "2026-04-12T00:00:00+00:00",
             },
         ]
     )
-    prediction_df.to_csv(root / "predictions" / "logistic_regression_predictions.csv", index=False)
+    prediction_df.to_csv(root / "predictions" / "catboost_with_logistic_score_predictions.csv", index=False)
 
     comparison_df = pd.DataFrame(
         [
             {
-                "model_name": "logistic_regression",
-                "model_version": "logreg_fixture",
+                "model_name": "catboost_with_logistic_score",
+                "model_version": "catboost_stack_fixture",
                 "roc_auc": 0.81,
                 "pr_auc": 0.09,
-                "precision": 0.03,
+                "precision": 0.40,
                 "recall": 0.80,
-                "f1": 0.06,
+                "f1": 0.53,
                 "brier_score": 0.19,
-                "threshold": 0.35,
+                "threshold": 0.90,
             }
         ]
     )
@@ -116,30 +116,30 @@ def _write_artifact_fixture(root: Path) -> None:
 
     pd.DataFrame(
         [
-            {"threshold": 0.35, "precision": 0.03, "recall": 0.80, "f1": 0.06, "actioned_count": 1},
+            {"threshold": 0.90, "precision": 0.40, "recall": 0.80, "f1": 0.53, "actioned_count": 1},
             {"threshold": 0.50, "precision": 0.05, "recall": 0.60, "f1": 0.09, "actioned_count": 1},
         ]
-    ).to_csv(root / "reports" / "logistic_regression_threshold_metrics.csv", index=False)
+    ).to_csv(root / "reports" / "catboost_with_logistic_score_threshold_metrics.csv", index=False)
 
     pd.DataFrame(
         [
             {"segment": "top_25", "selected_count": 2, "captured_no_show": 1, "total_no_show": 1, "recall": 1.0},
             {"segment": "top_50", "selected_count": 2, "captured_no_show": 1, "total_no_show": 1, "recall": 1.0},
         ]
-    ).to_csv(root / "reports" / "logistic_regression_top_k_metrics.csv", index=False)
+    ).to_csv(root / "reports" / "catboost_with_logistic_score_top_k_metrics.csv", index=False)
 
     summary = {
-        "recommended_model": "logistic_regression",
-        "selected_threshold": 0.35,
+        "recommended_model": "catboost_with_logistic_score",
+        "selected_threshold": 0.90,
         "models": {
-            "logistic_regression": {
-                "model_version": "logreg_fixture",
+            "catboost_with_logistic_score": {
+                "model_version": "catboost_stack_fixture",
                 "metrics": {
                     "roc_auc": 0.81,
                     "pr_auc": 0.09,
-                    "precision": 0.03,
+                    "precision": 0.40,
                     "recall": 0.80,
-                    "f1": 0.06,
+                    "f1": 0.53,
                     "brier_score": 0.19,
                 },
             }
@@ -157,7 +157,7 @@ def test_artifact_repository_lists_and_filters_reservations(tmp_path: Path) -> N
 
     assert total == 1
     assert items[0]["property_id"] == "RESORT_H1"
-    assert filters["model_name"] == "logistic_regression"
+    assert filters["model_name"] == "catboost_with_logistic_score"
     assert "TA/TO" in filters["distribution_channels"]
 
 
@@ -169,7 +169,7 @@ def test_artifact_repository_returns_detail_view(tmp_path: Path) -> None:
     detail = repository.get_reservation_detail(1)
 
     assert detail is not None
-    assert detail["latest_prediction"]["score"] == 0.81
+    assert detail["latest_prediction"]["score"] == 0.91
     assert detail["context"]["meal_plan"] == "BB"
 
 
@@ -180,10 +180,10 @@ def test_artifact_repository_builds_report_payload(tmp_path: Path) -> None:
 
     report = repository.get_benchmark_report()
 
-    assert report["recommended_model"] == "logistic_regression"
+    assert report["recommended_model"] == "catboost_with_logistic_score"
     assert report["comparison"][0]["pr_auc"] == 0.09
-    assert report["threshold_tables"]["logistic_regression"][0]["threshold"] == 0.35
-    assert report["top_k_tables"]["logistic_regression"][0]["segment"] == "top_25"
+    assert report["threshold_tables"]["catboost_with_logistic_score"][0]["threshold"] == 0.90
+    assert report["top_k_tables"]["catboost_with_logistic_score"][0]["segment"] == "top_25"
 
 
 def test_artifact_repository_builds_management_payloads(tmp_path: Path) -> None:

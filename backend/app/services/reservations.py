@@ -16,13 +16,17 @@ from app.schemas.reservations import (
     ReservationListItem,
     ReservationListResponse,
 )
+from app.training.constants import DEFAULT_ARTIFACTS_ROOT
+from app.training.stages import ModelStage
 
 
 class ReservationService:
     def __init__(self, db: Session) -> None:
         self.repository = ReservationRepository(db)
         self.actions_repository = ActionsRepository(db)
-        self.artifact_repository = ArtifactViewRepository()
+        self.artifact_repository = ArtifactViewRepository(
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+        )
 
     def _resolve_source(self) -> tuple[str, bool]:
         try:
@@ -80,7 +84,7 @@ class ReservationService:
             filters=ReservationFilterOptions(
                 property_ids=[],
                 distribution_channels=[],
-                risk_classes=["high", "medium", "low"],
+                risk_classes=["high", "medium", "notable", "low"],
                 min_arrival_date=None,
                 max_arrival_date=None,
                 model_name=None,
