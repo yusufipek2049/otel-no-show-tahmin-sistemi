@@ -19,6 +19,11 @@ __pycache__/
 .coverage.*
 htmlcov/
 
+
+# Docs
+docs/codex-task-02-model-benchmarking.md
+docs/codex-task-01-bootstrap.md
+
 # Backend local outputs
 backend/.venv/
 backend/.pytest_cache/

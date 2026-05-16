@@ -168,35 +168,37 @@ class ReservationService:
             logger.warning(log_event("reservation_actions_database_unavailable", reservation_id=reservation_id))
             actions = []
 
-        return ReservationDetailResponse(
-            reservation_id=detail["reservation_id"],
-            property_id=detail["property_id"],
-            source_file=detail["source_file"],
-            arrival_date=detail["arrival_date"],
-            lead_time_days=detail["lead_time_days"],
-            distribution_channel=detail["distribution_channel"],
-            market_segment=detail["market_segment"],
-            customer_type=detail["customer_type"],
-            reserved_room_type=detail["reserved_room_type"],
-            deposit_type=detail["deposit_type"],
-            no_show_flag=detail["no_show_flag"],
-            excluded_from_training=detail["excluded_from_training"],
-            exclusion_reason=detail["exclusion_reason"],
-            latest_prediction=latest_prediction,
-            actions=[
-                {
-                    "id": action.id,
-                    "reservation_id": action.reservation_clean_id,
-                    "prediction_id": action.prediction_id,
-                    "action_type": action.action_type,
-                    "action_status": action.action_status,
-                    "action_note": action.action_note,
-                    "acted_by": action.acted_by,
-                    "payload": action.payload,
-                    "acted_at": action.acted_at,
-                }
-                for action in actions
-            ],
-            data_source=data_source,
-            action_support_enabled=action_support_enabled,
+        return ReservationDetailResponse.model_validate(
+            {
+                "reservation_id": detail["reservation_id"],
+                "property_id": detail["property_id"],
+                "source_file": detail["source_file"],
+                "arrival_date": detail["arrival_date"],
+                "lead_time_days": detail["lead_time_days"],
+                "distribution_channel": detail["distribution_channel"],
+                "market_segment": detail["market_segment"],
+                "customer_type": detail["customer_type"],
+                "reserved_room_type": detail["reserved_room_type"],
+                "deposit_type": detail["deposit_type"],
+                "no_show_flag": detail["no_show_flag"],
+                "excluded_from_training": detail["excluded_from_training"],
+                "exclusion_reason": detail["exclusion_reason"],
+                "latest_prediction": latest_prediction,
+                "actions": [
+                    {
+                        "id": action.id,
+                        "reservation_id": action.reservation_clean_id,
+                        "prediction_id": action.prediction_id,
+                        "action_type": action.action_type,
+                        "action_status": action.action_status,
+                        "action_note": action.action_note,
+                        "acted_by": action.acted_by,
+                        "payload": action.payload,
+                        "acted_at": action.acted_at,
+                    }
+                    for action in actions
+                ],
+                "data_source": data_source,
+                "action_support_enabled": action_support_enabled,
+            }
         )

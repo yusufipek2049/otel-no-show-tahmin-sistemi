@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-import urllib.request
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pandas as pd
+import requests
 
 from app.training.constants import DEFAULT_DATA_DIR, RAW_DATA_URLS
+
+ALLOWED_DOWNLOAD_HOSTS = {"raw.githubusercontent.com"}
+
+
+def _validate_public_data_url(url: str) -> None:
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or parsed.hostname not in ALLOWED_DOWNLOAD_HOSTS:
+        raise ValueError(f"Unsupported public data URL: {url}")
 
 
 def download_public_hotel_booking_data(
@@ -19,7 +28,10 @@ def download_public_hotel_booking_data(
     for filename, url in RAW_DATA_URLS.items():
         target_path = data_dir / filename
         if overwrite or not target_path.exists():
-            urllib.request.urlretrieve(url, target_path)
+            _validate_public_data_url(url)
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            target_path.write_bytes(response.content)
         downloaded_files[filename] = target_path
 
     return downloaded_files
