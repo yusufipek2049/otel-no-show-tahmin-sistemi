@@ -4,7 +4,7 @@ This backlog tracks the practical path from the current proof-of-concept to a pr
 
 ## Done
 
-The project already includes the core V1 shape:
+The project already has the core V1 shape:
 
 - backend skeleton
 - frontend skeleton
@@ -33,7 +33,7 @@ The project already includes the core V1 shape:
 ## Next
 
 1. Replace synthetic operational signals with real source data.
-2. Add a dedicated batch/live scoring job separate from training.
+2. Add a dedicated batch or live scoring job separate from training.
 3. Persist active stage predictions to the database by default.
 4. Add authentication and role-based access.
 5. Track action outcomes, not only action status.
@@ -45,7 +45,7 @@ The project already includes the core V1 shape:
 
 These items are intentionally outside the current path:
 
-- adding more model candidates for its own sake
+- adding more model candidates without a clear product reason
 - building a generic marketing dashboard
 - traffic, ad spend, ROAS, CPC, or CTR analytics
 - multi-class cancellation/no-show/check-out modeling

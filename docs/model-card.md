@@ -21,7 +21,7 @@ Model type:
 
 The model helps hotel operations teams prioritize customers or reservations that may need follow-up before arrival.
 
-It is decision support. It should not trigger automatic punitive action.
+It is a decision-support tool. It should guide review priority, not trigger automatic punitive action.
 
 ## Not Intended For
 
@@ -60,7 +60,7 @@ Main input groups:
 - campaign / channel signals
 - guarantee and deposit signals
 
-Operational signals are synthetic in the public H1/H2 proof-of-concept. Production use requires real timestamped data.
+Operational signals are synthetic in the public H1/H2 proof-of-concept. Production use requires real timestamped data from hotel systems.
 
 ## Evaluation
 
@@ -74,7 +74,7 @@ Required metrics:
 - Brier score
 - calibration table
 
-Current artifact quality should be read as proof-of-concept quality because the strongest operational signals are synthetic proxies.
+Current artifact quality should be read as proof-of-concept quality because the strongest operational signals are still synthetic proxies.
 
 ## Risks
 
@@ -101,4 +101,4 @@ Monitor:
 
 ## Human Oversight
 
-Operations users should review reservation context before acting. The score should prioritize work, not replace judgment.
+Operations users should review reservation context before acting. The score should help prioritize work, not replace human judgment.

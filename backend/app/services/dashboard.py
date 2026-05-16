@@ -49,12 +49,14 @@ class DashboardService:
             return DashboardSummaryResponse.model_validate(payload)
 
         try:
-            return DashboardSummaryResponse(
-                kpis=self.repository.get_kpis(),
-                items=self.repository.get_recent_risky_reservations(),
-                data_source=data_source,
-                scoring_status=scoring_status,
-                action_support_enabled=action_support_enabled,
+            return DashboardSummaryResponse.model_validate(
+                {
+                    "kpis": self.repository.get_kpis(),
+                    "items": self.repository.get_recent_risky_reservations(),
+                    "data_source": data_source,
+                    "scoring_status": scoring_status,
+                    "action_support_enabled": action_support_enabled,
+                }
             )
         except SQLAlchemyError:
             logger.warning(log_event("dashboard_summary_database_unavailable", fallback="database_bootstrap"))

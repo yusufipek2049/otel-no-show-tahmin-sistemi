@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository is a no-show prediction and operations support system.
+This repository is focused on no-show prediction and the operational workflow around it.
 
 In scope:
 
@@ -22,7 +22,7 @@ Out of scope:
 
 ## V1 Definition
 
-V1 means the system can:
+V1 means the system can reliably:
 
 - ingest hotel reservation data
 - build leakage-safe feature tables
@@ -62,7 +62,7 @@ Still weak or incomplete:
 
 ## V2 Definition
 
-V2 adds management visibility on top of the operational no-show workflow.
+V2 adds stronger management visibility on top of the operational no-show workflow.
 
 Currently present:
 

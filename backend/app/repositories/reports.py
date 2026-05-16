@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from statistics import mean
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -73,6 +73,14 @@ class ReportsRepository:
         normalized = str(value).strip()
         return normalized or fallback
 
+    @staticmethod
+    def _increment_bucket_count(bucket: dict[str, object], key: str) -> None:
+        bucket[key] = ReportsRepository._bucket_int(bucket, key) + 1
+
+    @staticmethod
+    def _bucket_int(bucket: dict[str, object], key: str) -> int:
+        return cast(int, bucket[key])
+
     def get_operations_summary(self) -> dict[str, object]:
         rows = self._get_reporting_rows()
         actions = self._get_actions()
@@ -108,18 +116,18 @@ class ReportsRepository:
                     "canceled_count": 0,
                 },
             )
-            bucket["total_reservations"] += 1
+            self._increment_bucket_count(bucket, "total_reservations")
             if row.get("no_show_flag") is True:
-                bucket["no_show_count"] += 1
+                self._increment_bucket_count(bucket, "no_show_count")
             if self._is_canceled(row):
-                bucket["canceled_count"] += 1
+                self._increment_bucket_count(bucket, "canceled_count")
 
         results = []
         for period in sorted(buckets):
             bucket = buckets[period]
-            total = int(bucket["total_reservations"])
-            no_show_count = int(bucket["no_show_count"])
-            canceled_count = int(bucket["canceled_count"])
+            total = self._bucket_int(bucket, "total_reservations")
+            no_show_count = self._bucket_int(bucket, "no_show_count")
+            canceled_count = self._bucket_int(bucket, "canceled_count")
             results.append(
                 {
                     **bucket,
@@ -148,43 +156,44 @@ class ReportsRepository:
                     "scores": [],
                 },
             )
-            bucket["total_reservations"] += 1
+            self._increment_bucket_count(bucket, "total_reservations")
             if row.get("score") is not None:
-                bucket["scored_reservations"] += 1
-                bucket["scores"].append(float(row["score"]))
+                self._increment_bucket_count(bucket, "scored_reservations")
+                scores = cast(list[float], bucket["scores"])
+                scores.append(float(cast(float, row["score"])))
             if row.get("risk_class") == "high":
-                bucket["high_risk_reservations"] += 1
+                self._increment_bucket_count(bucket, "high_risk_reservations")
             if row.get("no_show_flag") is True:
-                bucket["no_show_count"] += 1
+                self._increment_bucket_count(bucket, "no_show_count")
             if self._is_canceled(row):
-                bucket["canceled_count"] += 1
+                self._increment_bucket_count(bucket, "canceled_count")
 
         results = []
         for key, bucket in buckets.items():
-            total = int(bucket["total_reservations"])
-            no_show_count = int(bucket["no_show_count"])
-            canceled_count = int(bucket["canceled_count"])
+            total = self._bucket_int(bucket, "total_reservations")
+            no_show_count = self._bucket_int(bucket, "no_show_count")
+            canceled_count = self._bucket_int(bucket, "canceled_count")
             results.append(
                 {
                     "dimension_value": key,
                     "total_reservations": total,
-                    "scored_reservations": int(bucket["scored_reservations"]),
-                    "high_risk_reservations": int(bucket["high_risk_reservations"]),
+                    "scored_reservations": self._bucket_int(bucket, "scored_reservations"),
+                    "high_risk_reservations": self._bucket_int(bucket, "high_risk_reservations"),
                     "no_show_count": no_show_count,
                     "canceled_count": canceled_count,
                     "no_show_rate": self._rate(no_show_count, total),
                     "cancellation_rate": self._rate(canceled_count, total),
-                    "average_score": mean(bucket["scores"]) if bucket["scores"] else None,
+                    "average_score": mean(cast(list[float], bucket["scores"])) if bucket["scores"] else None,
                 }
             )
 
-        return sorted(results, key=lambda row: (-row["total_reservations"], row["dimension_value"]))
+        return sorted(results, key=lambda row: (-cast(int, row["total_reservations"]), str(row["dimension_value"])))
 
     def get_action_effectiveness(self) -> dict[str, object]:
         rows = self._get_reporting_rows()
         actions = self._get_actions()
         high_risk_reservation_ids = {
-            int(row["reservation_id"])
+            cast(int, row["reservation_id"])
             for row in rows
             if row.get("risk_class") == "high" and row.get("reservation_id") is not None
         }

@@ -15,7 +15,7 @@ Use one final model architecture:
 
 - `catboost_with_logistic_score`
 
-Logistic Regression is an internal feeder model, not a displayed candidate.
+Logistic Regression is an internal feeder model, not a displayed product candidate.
 
 ## Rationale
 

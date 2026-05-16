@@ -1,14 +1,14 @@
 # Hotel No-Show Prediction and Operations Dashboard
 
-This repository is an end-to-end hotel no-show prediction system. It covers leakage-safe feature engineering, temporal validation, calibrated risk scoring, threshold and Top-K evaluation, DB-backed prediction persistence, artifact fallback views, model documentation, tests, CI, and an operations dashboard.
+This repository is an end-to-end hotel no-show prediction system. It combines leakage-aware feature engineering, temporal validation, calibrated risk scoring, prediction persistence, local artifact fallback, API services, documentation, tests, CI, and an operations dashboard.
 
-The project is built as an applied ML engineering system. Model training is connected to the day-to-day workflow where hotel teams review risky reservations and record follow-up actions.
+The goal is practical ML engineering: train a model, persist auditable scores, show risky reservations to hotel staff, and record the actions taken on those reservations.
 
 ## Project Purpose
 
-Hotels lose capacity and revenue when guests do not arrive without canceling. A useful no-show system needs to do more than train a classifier. It needs auditable risk scores, a clear data availability policy, operational thresholds, persisted predictions, and workflows that staff can actually use.
+Hotels lose capacity and revenue when guests do not arrive without canceling. A useful no-show system needs more than a classifier. It needs clear target construction, a feature availability policy, operational thresholds, persisted predictions, and review workflows that staff can use.
 
-This repository implements that path:
+This project includes:
 
 - FastAPI backend
 - PostgreSQL schema and Alembic migration
@@ -17,8 +17,8 @@ This repository implements that path:
 - artifact fallback mode for local demos
 - Next.js operations dashboard
 - reservation detail and action workflow
-- management reports
-- model card, dataset card, and research-style documentation
+- management and model reports
+- model card, dataset card, and supporting documentation
 
 ## Problem Definition
 
@@ -30,16 +30,16 @@ The primary ML task is binary no-show prediction:
 
 Canceled reservations are a different business outcome and should be modeled separately if needed.
 
-The active stages are:
+Active stages:
 
 - `customer_pre_reservation`: customer-level no-show propensity before a specific reservation is finalized
 - `reservation_post_booking`: reservation-level no-show risk after a booking exists
 
-The legacy `booking_time` stage is still kept for compatibility and leakage-safe baseline work.
+The legacy `booking_time` stage is kept for compatibility and leakage-safe baseline work.
 
 ## Why It Matters
 
-No-show prediction is valuable only when it supports a concrete action:
+No-show prediction is useful only when it supports a concrete action:
 
 - contact the guest
 - verify guarantee or deposit details
@@ -47,7 +47,7 @@ No-show prediction is valuable only when it supports a concrete action:
 - manage overbooking risk
 - measure action coverage and outcomes
 
-For that reason, the project evaluates not only ranking metrics, but also threshold behavior, action volume, Top-K capture, calibration, and prediction-store persistence.
+For that reason, evaluation includes not only ranking metrics, but also threshold behavior, action volume, Top-K capture, calibration, and prediction-store persistence.
 
 ## Current Model Decision
 
@@ -229,7 +229,7 @@ This mode is useful for local demos and model inspection, but it is read-only fo
 docker compose up -d postgres
 ```
 
-### 2. Create backend environment
+### 2. Create Backend Environment
 
 ```bash
 cd backend
@@ -245,7 +245,7 @@ Backend defaults:
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
 
-### 3. Start frontend
+### 3. Start Frontend
 
 ```bash
 cd frontend
@@ -383,6 +383,7 @@ The CI workflow installs backend and frontend dependencies, runs backend tests, 
 - `docs/data-mapping.md`
 - `docs/v1-v2-gap-analysis.md`
 - `docs/acceptance-criteria.md`
+- `docs/demo-guide.md`
 
 ## Limitations
 

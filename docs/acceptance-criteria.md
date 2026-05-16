@@ -1,19 +1,19 @@
 # Acceptance Criteria
 
-This document defines what "done" means for the no-show prediction system. The goal is to keep the project honest: a feature is not finished just because a screen renders or a model trains once.
+This document defines what "done" means for the no-show prediction system. A feature is not complete just because a screen renders or a model trains once; it needs to be reproducible, testable, and aligned with the project rules.
 
 ## General
 
-A task is complete only when:
+A task is complete when:
 
-- the requested implementation exists
-- tests or validation have been run for the changed behavior
+- the requested behavior is implemented
+- the changed behavior has tests or a clear validation path
 - important assumptions are documented
-- affected documentation is updated
+- related documentation is updated when the behavior changes
 
 ## Data And Target
 
-The data layer is considered ready when:
+The data layer is ready when:
 
 - `H1.csv` and `H2.csv` load reproducibly
 - raw source rows are preserved
@@ -24,30 +24,30 @@ The data layer is considered ready when:
 
 ## Feature Pipeline
 
-The feature pipeline is considered ready when:
+The feature pipeline is ready when:
 
 - feature lists are explicit for each stage
 - leakage columns are blocked before training
-- synthetic operational signals are clearly documented
+- synthetic operational signals are documented clearly
 - numeric and categorical feature lists are stable
 - a machine-readable feature list artifact is written
 - transformations can be reproduced from the same input data
 
 ## Model Training
 
-Training is considered ready when:
+Training is ready when:
 
 - `customer_pre_reservation` trains end to end
 - `reservation_post_booking` trains end to end
 - the final candidate is `catboost_with_logistic_score`
 - Logistic Regression is used only as a feeder score
-- feeder scores are generated out-of-fold when enough data exists
+- feeder scores are generated out-of-fold when enough rows exist
 - CatBoost probabilities are calibrated
 - the model, feeder, calibrator, metadata, and predictions are persisted
 
 ## Evaluation
 
-Evaluation is considered ready when each run reports:
+Each training run should report:
 
 - PR-AUC
 - ROC-AUC
@@ -61,12 +61,12 @@ Evaluation is considered ready when each run reports:
 
 ## Product Surfaces
 
-The product surface is considered ready when:
+The product surface is ready when:
 
 - `/customer-risk` shows the customer-level stage
 - `/reservation-risk` shows the reservation-level stage
-- `/dashboard` uses the reservation-stage artifact fallback when DB predictions are absent
-- `/reports` uses active model quality wording, not broad benchmark wording
+- `/dashboard` uses reservation-stage artifact fallback when DB predictions are absent
+- `/reports` describes active model quality, not a broad benchmark exercise
 - action thresholds and risk labels match backend constants
 
 ## Production Readiness Caveat

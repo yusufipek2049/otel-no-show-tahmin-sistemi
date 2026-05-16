@@ -20,11 +20,9 @@ The no-show target is built from final reservation status:
 - positive: `ReservationStatus == "No-Show"`
 - negative: `ReservationStatus == "Check-Out"`
 
-Excluded from no-show training:
+Rows with `ReservationStatus == "Canceled"` are excluded from no-show training.
 
-- `ReservationStatus == "Canceled"`
-
-Cancellation and no-show are different operational outcomes, so they should not be mixed into one binary target.
+Cancellation and no-show are different operational outcomes, so they should not be merged into one binary target.
 
 ## Known Data Limitations
 
@@ -38,11 +36,11 @@ The public CSV files are final-state extracts. They do not include full event hi
 - reservation change timestamps
 - room assignment timestamps
 
-Because of this, H1/H2 alone cannot fully validate true post-booking as-of modeling.
+Because of that, H1/H2 alone cannot fully validate true post-booking as-of modeling.
 
 ## Synthetic Features
 
-The project currently creates synthetic proxies for operational signals that are important in the real product:
+The project creates synthetic proxies for operational signals that would matter in a real hotel environment:
 
 - customer identity
 - payment failure
@@ -51,7 +49,7 @@ The project currently creates synthetic proxies for operational signals that are
 - channel campaign pressure
 - guarantee / deposit detail
 
-These proxies are useful for architecture validation, UI development, and pipeline testing. They are not enough to make a production evidence claim.
+These proxies are useful for architecture validation, UI development, and pipeline testing. They should not be treated as production evidence.
 
 ## Excluded Fields
 

@@ -2,7 +2,7 @@
 
 ## Current Decision
 
-This project is a staged no-show prediction system. It is not a cancellation model and it is not a generic BI product.
+This project is a staged no-show prediction system. It is not a cancellation model, and it is not a generic BI product.
 
 Active production-style stages:
 
@@ -116,7 +116,7 @@ Primary quality view:
 4. Calibration / Brier score
 5. ROC-AUC
 
-Accuracy is not a decision metric because no-show is a minority event.
+Accuracy is not a decision metric here because no-show is a minority event.
 
 ## Minimum Acceptance
 

@@ -1,16 +1,43 @@
 # Demo Guide
 
-This guide walks through a local demo of the hotel no-show prediction and operations dashboard.
+This guide is for a short local demo of the hotel no-show prediction system for a recruiter, interviewer, or technical reviewer.
 
-## Start The Backend
+## 1. Demo Goal
 
-Start PostgreSQL:
+In 3-5 minutes, show the full product loop:
+
+- train a leakage-aware no-show model
+- generate model artifacts and evaluation reports
+- optionally persist predictions to PostgreSQL
+- review risky reservations in the dashboard
+- record operational actions and inspect reports
+
+Do not quote fixed metric values during the demo. Metrics are generated under `backend/artifacts/` after each training run.
+
+## 2. Prerequisites
+
+- Docker and Docker Compose
+- Python 3.10 or newer
+- Node.js and npm
+- Local CSV files in `data/`, or internet access to use `--download-if-missing`
+
+## 3. Start PostgreSQL
+
+From the repository root:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Install backend dependencies and run migrations:
+Default database connection:
+
+```text
+postgresql+psycopg://postgres:postgres@localhost:5432/hotel_no_show
+```
+
+## 4. Run Backend
+
+In a separate terminal:
 
 ```bash
 cd backend
@@ -21,13 +48,15 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Backend defaults:
+Useful URLs:
 
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
 - health check: `http://localhost:8000/api/v1/health`
 
-## Start The Frontend
+## 5. Run Frontend
+
+In another terminal:
 
 ```bash
 cd frontend
@@ -35,17 +64,15 @@ npm install
 npm run dev
 ```
 
-Frontend default:
+Open `http://localhost:3000`.
 
-- `http://localhost:3000`
-
-If the backend runs somewhere else, set:
+The frontend defaults to `http://localhost:8000/api/v1`. If needed, set:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
-## Run Training
+## 6. Run Training Pipeline
 
 Train the customer-level pre-reservation stage:
 
@@ -65,14 +92,16 @@ python3 -m app.jobs.train_booking_time_no_show \
   --download-if-missing
 ```
 
-Training writes stage-specific artifacts under:
+Artifacts are written under:
 
 - `backend/artifacts/booking_time_no_show/customer_pre_reservation/latest/`
 - `backend/artifacts/booking_time_no_show/reservation_post_booking/latest/`
 
-## Populate The DB Prediction Store
+Evaluation metrics, threshold tables, calibration outputs, predictions, and model files are generated in those artifact directories.
 
-To persist reservation-stage predictions to PostgreSQL:
+## 7. Persist Predictions To The Database
+
+To populate PostgreSQL from a training run:
 
 ```bash
 cd backend
@@ -82,56 +111,51 @@ python3 -m app.jobs.train_booking_time_no_show \
   --database-url "postgresql+psycopg://postgres:postgres@localhost:5432/hotel_no_show"
 ```
 
-When prediction rows exist in the database, the app reads operational queues from the DB-backed prediction store. When they do not, it reads the latest artifacts in read-only fallback mode.
+When database predictions exist, operational API views use the prediction store. If the database is empty, the app can still use the latest artifacts as a local read-only fallback.
 
-## Screens To Show
+## 8. Pages To Show
 
-A clear demo flow is:
+Recommended order:
 
-1. `/dashboard`
-2. `/reservation-risk`
-3. `/reservations`
-4. `/reservations/[reservationId]`
-5. `/customer-risk`
-6. `/reports`
-7. Swagger: `/docs`
+1. `/dashboard`: operational summary and high-risk queue
+2. `/reservation-risk`: reservation-stage model quality and threshold behavior
+3. `/reservations`: filterable reservation list
+4. `/reservations/[reservationId]`: reservation detail and action logging
+5. `/customer-risk`: customer-level pre-reservation risk view
+6. `/reports`: model, business, segment, and action reports
+7. `http://localhost:8000/docs`: API surface
 
-What each screen shows:
+## 9. Three-Minute Demo Script
 
-- `/dashboard`: operational queue and high-risk reservation summary
-- `/reservation-risk`: reservation-level model quality and threshold behavior
-- `/reservations`: filterable reservation queue
-- `/reservations/[reservationId]`: reservation context and staff action workflow
-- `/customer-risk`: customer-level pre-reservation risk view
-- `/reports`: management reporting, benchmark summary, and action effectiveness
-- `/docs`: API structure and backend surface area
+**0:00-0:30 - Problem and scope**
 
-## Suggested 3-Minute Demo Script
+This project predicts hotel no-shows and turns those predictions into an operations workflow. The target is binary no-show prediction: no-show versus check-out, with canceled reservations excluded from training.
 
-**0:00-0:25 Problem**
+**0:30-1:00 - Training**
 
-Hotels need to find high-risk reservations before those reservations turn into no-shows. This system turns prediction into an operations queue instead of leaving it as a notebook model.
+The training pipeline imports hotel booking data, cleans reservation records, applies feature policy checks, uses a temporal split, trains the active model, and writes artifacts under `backend/artifacts/`.
 
-**0:25-0:55 Training**
+**1:00-1:30 - Evaluation**
 
-The training pipeline builds leakage-safe features, excludes canceled reservations from the no-show target, and uses a temporal split: 2015-2016 for training and 2017 for testing. The active model is CatBoost with a Logistic Regression feeder score and isotonic calibration.
+Open the risk or reports page. Explain that the demo does not hard-code metrics; PR-AUC, recall, precision, F1, threshold analysis, calibration, and Top-K outputs are generated after training.
 
-**0:55-1:20 Evaluation**
+**1:30-2:15 - Operations dashboard**
 
-Evaluation focuses on rare-event and operations metrics: PR-AUC, threshold precision and recall, Top-K capture, calibration, Brier score, and action volume. Scores are direct no-show probabilities.
+Show `/dashboard`, then `/reservations`. Explain how risky reservations are surfaced for review and how the system can run from persisted DB predictions or local artifact fallback.
 
-**1:20-1:45 Serving**
+**2:15-2:45 - Action workflow**
 
-Predictions can be persisted to PostgreSQL. When the store is populated, the application serves risk queues from the database. For local demos, the same screens can read latest training artifacts as a fallback.
+Open a reservation detail page and show the action panel. The point is auditability: staff actions such as calls, messages, or manual review are recorded instead of leaving model output disconnected from operations.
 
-**1:45-2:15 Dashboard**
+**2:45-3:00 - Wrap-up**
 
-The operations team reviews high-risk reservations, sees the current scoring source, and uses filters plus detail pages to decide what needs attention first.
+Show `/reports` and Swagger. Close by explaining that the project connects model training, persistence, APIs, dashboard review, action logging, and reporting in one local system.
 
-**2:15-2:40 Actions**
+## 10. Common Troubleshooting
 
-Staff can record interventions such as calls, messages, deposit requests, or manual review. That connects model output to an auditable workflow.
-
-**2:40-3:00 Reports**
-
-The reports page shows model quality, threshold behavior, Top-K capture, no-show trends, channel and segment breakdowns, and action effectiveness summaries. It closes the loop between training and operations.
+- **PostgreSQL will not start:** check whether port `5432` is already in use, or set `POSTGRES_PORT` before running Docker Compose.
+- **Backend cannot connect to the database:** confirm `docker compose ps` shows Postgres running, then rerun `alembic upgrade head` from `backend/`.
+- **Frontend cannot load data:** make sure the backend is running on `localhost:8000` and `NEXT_PUBLIC_API_BASE_URL` points to `/api/v1`.
+- **Training cannot find data:** place `H1.csv` and `H2.csv` in `data/`, or run with `--download-if-missing`.
+- **Metrics are missing:** run the training pipeline first. Metrics and reports are generated under the relevant `backend/artifacts/.../latest/reports/` directory.
+- **Dashboard has no DB-backed predictions:** run the persistence command in section 7, or use artifact fallback mode for a local read-only demo.

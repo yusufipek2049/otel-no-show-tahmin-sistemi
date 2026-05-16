@@ -148,6 +148,7 @@ def build_calibration_table(
 
 def score_to_risk_class(score: float) -> str:
     for band in RISK_CLASS_BANDS:
-        if score >= float(band["minimum_score"]):
+        minimum_score = band["minimum_score"]
+        if isinstance(minimum_score, (int, float)) and score >= float(minimum_score):
             return str(band["risk_class"])
     return "low"

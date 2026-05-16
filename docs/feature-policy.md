@@ -59,7 +59,7 @@ Allowed feature groups:
 
 The public H1/H2 dataset does not contain real CRM, payment, messaging, campaign, or deposit event logs.
 
-The current operational signals are synthetic proxies built so the system design, feature contracts, API surfaces, and UI workflows can be validated. In production, these fields must be replaced by timestamped source data from:
+The current operational signals are synthetic proxies. They let the team validate the system design, feature contracts, API surface, and UI workflow before real event data is available. In production, these fields must be replaced by timestamped source data from:
 
 - customer master data
 - PMS reservation event history
@@ -68,7 +68,7 @@ The current operational signals are synthetic proxies built so the system design
 - campaign exposure logs
 - deposit and guarantee workflows
 
-Synthetic signals must be marked as synthetic in model documentation and must not be treated as proven production predictors.
+Synthetic signals must be marked as synthetic in model documentation and must not be presented as proven production predictors.
 
 ## Booking-Time Compatibility Policy
 

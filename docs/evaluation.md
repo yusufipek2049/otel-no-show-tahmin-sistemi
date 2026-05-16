@@ -2,7 +2,7 @@
 
 ## Objective
 
-Evaluation needs to answer two practical questions:
+Evaluation should answer two practical questions:
 
 - Can the model rank likely no-shows ahead of likely arrivals?
 - At the chosen action threshold, is the workload worth the no-shows captured?

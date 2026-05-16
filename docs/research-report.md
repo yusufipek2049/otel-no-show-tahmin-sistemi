@@ -8,9 +8,9 @@ The current proof-of-concept uses public hotel booking data and synthetic operat
 
 ## Motivation
 
-Hotel no-shows create unused room capacity, staffing inefficiency, and revenue risk. A model is useful only if it becomes part of a real operational workflow: a queue, a threshold policy, clear score semantics, and monitoring that shows whether the actions are working.
+Hotel no-shows create unused room capacity, staffing inefficiency, and revenue risk. A model is useful only when it becomes part of an operational workflow: a review queue, a threshold policy, clear score semantics, and monitoring that shows whether actions are working.
 
-For that reason, this project evaluates the model as an operations system, not as a standalone notebook classifier.
+For that reason, this project treats the model as part of an operations system, not as a standalone notebook classifier.
 
 ## Task Definition
 

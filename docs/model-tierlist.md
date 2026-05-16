@@ -29,7 +29,7 @@ It should:
 - be saved as `logistic_regression_feeder.joblib`
 - stay out of the product UI as a separate candidate
 
-This gives CatBoost a stable linear baseline signal without turning the product into a confusing two-model comparison.
+This gives CatBoost a stable linear baseline signal without turning the product into a confusing two-model comparison for users.
 
 ## Optional Future Benchmarks
 
@@ -55,4 +55,4 @@ When comparing future alternatives, use this order:
 5. ROC-AUC
 6. production cost and maintainability
 
-Accuracy must not be used as the model selection metric.
+Accuracy must not be used as the selection metric for this problem.

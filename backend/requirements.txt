@@ -9,5 +9,6 @@ numpy>=1.26,<3.0
 scikit-learn>=1.5,<2.0
 catboost>=1.2,<2.0
 joblib>=1.4,<2.0
+requests>=2.32,<3.0
 pytest>=8.0,<9.0
 httpx>=0.27,<1.0

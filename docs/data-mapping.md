@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document explains how the current CSV files are interpreted inside the no-show system. It is meant to keep ingestion, cleaning, feature building, and model training aligned.
+This document explains how the current CSV files are interpreted inside the no-show system. It keeps ingestion, cleaning, feature building, and model training aligned.
 
 The local proof-of-concept data comes from:
 
@@ -20,7 +20,7 @@ The CSVs are useful, but they are not clean application data. The import pipelin
 - numeric-looking identifiers stored as padded strings
 - sparse categories and high-cardinality ID-like fields
 
-Do not train directly on raw strings. Normalize first, while keeping enough raw context for traceability.
+Do not train directly on raw strings. Normalize first, while preserving enough source context for traceability.
 
 Recommended normalization:
 
@@ -40,7 +40,7 @@ The target is:
 
 Rows with `ReservationStatus == "Canceled"` are excluded from the no-show training dataset.
 
-Cancellation can be modeled later if the product needs it, but it should be treated as a separate outcome.
+Cancellation can be modeled later if the product needs it, but it should remain a separate outcome.
 
 ## Internal Layers
 
