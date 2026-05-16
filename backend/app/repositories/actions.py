@@ -3,9 +3,12 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger, log_event
 from app.models.audit import ReservationAction
 from app.models.reservation import ReservationClean
 from app.repositories.reservations import build_latest_prediction_subquery
+
+logger = get_logger(__name__)
 
 
 class ActionsRepository:
@@ -59,6 +62,15 @@ class ActionsRepository:
         self.db.add(action)
         self.db.commit()
         self.db.refresh(action)
+        logger.info(
+            log_event(
+                "reservation_action_committed",
+                reservation_id=reservation_id,
+                action_id=action.id,
+                action_type=action.action_type,
+                status=action.action_status,
+            )
+        )
         return action
 
     def update_action(
@@ -76,4 +88,5 @@ class ActionsRepository:
         self.db.add(action)
         self.db.commit()
         self.db.refresh(action)
+        logger.info(log_event("reservation_action_update_committed", action_id=action.id, status=action.action_status))
         return action

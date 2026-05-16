@@ -19,9 +19,9 @@ Model type:
 
 ## Intended Use
 
-The model supports hotel operations teams by prioritizing customers or reservations that may require follow-up before arrival.
+The model helps hotel operations teams prioritize customers or reservations that may need follow-up before arrival.
 
-It should be used for decision support, not automatic punitive action.
+It is decision support. It should not trigger automatic punitive action.
 
 ## Not Intended For
 
@@ -60,7 +60,7 @@ Main input groups:
 - campaign / channel signals
 - guarantee and deposit signals
 
-Operational signals are synthetic in the public H1/H2 proof-of-concept and must be replaced with real timestamped data for production use.
+Operational signals are synthetic in the public H1/H2 proof-of-concept. Production use requires real timestamped data.
 
 ## Evaluation
 
@@ -68,13 +68,13 @@ Required metrics:
 
 - PR-AUC
 - ROC-AUC
-- precision, recall, F1 at threshold
+- precision, recall, and F1 at threshold
 - actioned count
 - recall at Top-K
 - Brier score
 - calibration table
 
-Current observed artifact quality should be treated as proof-of-concept quality because the strongest operational signals are synthetic proxies.
+Current artifact quality should be read as proof-of-concept quality because the strongest operational signals are synthetic proxies.
 
 ## Risks
 
@@ -84,7 +84,7 @@ Main risks:
 - overstated performance from random splits
 - false positives creating unnecessary guest contact
 - false negatives missing true no-shows
-- synthetic signal overconfidence
+- overconfidence from synthetic signals
 - drift by season, channel, country, and campaign mix
 
 ## Required Monitoring
@@ -101,4 +101,4 @@ Monitor:
 
 ## Human Oversight
 
-Operations users should review the context before acting. The score should prioritize workflow, not replace judgment.
+Operations users should review reservation context before acting. The score should prioritize work, not replace judgment.

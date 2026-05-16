@@ -2,35 +2,33 @@
 
 ## Dataset
 
-Current proof-of-concept data:
+The current proof-of-concept uses:
 
 - `data/raw/H1.csv`
 - `data/raw/H2.csv`
 
-Source files share the public hotel booking demand schema.
+Both files follow the public hotel booking demand schema.
 
 ## Unit Of Observation
 
-One row represents one hotel reservation record in the source extract.
+Each row represents one reservation record in the source extract.
 
 ## Target Construction
 
-No-show target:
+The no-show target is built from final reservation status:
 
 - positive: `ReservationStatus == "No-Show"`
 - negative: `ReservationStatus == "Check-Out"`
 
-Excluded:
+Excluded from no-show training:
 
 - `ReservationStatus == "Canceled"`
 
-Reason:
-
-- cancellation and no-show are different operational outcomes
+Cancellation and no-show are different operational outcomes, so they should not be mixed into one binary target.
 
 ## Known Data Limitations
 
-The public CSV files are final-state extracts. They do not provide complete event history for:
+The public CSV files are final-state extracts. They do not include full event history for:
 
 - payment attempts
 - customer contact attempts
@@ -40,11 +38,11 @@ The public CSV files are final-state extracts. They do not provide complete even
 - reservation change timestamps
 - room assignment timestamps
 
-Because of this, real post-booking as-of modeling cannot be fully validated with H1/H2 alone.
+Because of this, H1/H2 alone cannot fully validate true post-booking as-of modeling.
 
 ## Synthetic Features
 
-The project currently creates synthetic proxies for strong operational signals:
+The project currently creates synthetic proxies for operational signals that are important in the real product:
 
 - customer identity
 - payment failure
@@ -53,7 +51,7 @@ The project currently creates synthetic proxies for strong operational signals:
 - channel campaign pressure
 - guarantee / deposit detail
 
-These are acceptable for architecture validation, UI development, and pipeline testing. They are not enough for a production evidence claim.
+These proxies are useful for architecture validation, UI development, and pipeline testing. They are not enough to make a production evidence claim.
 
 ## Excluded Fields
 
@@ -63,7 +61,7 @@ Hard exclusions:
 - `ReservationStatusDate`
 - `IsCanceled`
 
-Excluded unless available as as-of snapshot:
+Excluded unless available as timestamped as-of snapshots:
 
 - `BookingChanges`
 - `DaysInWaitingList`

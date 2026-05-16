@@ -1,12 +1,12 @@
 # Hotel No-Show Prediction and Operations Dashboard
 
-End-to-end hotel no-show prediction system with leakage-safe feature engineering, temporal validation, calibrated risk scoring, threshold and Top-K evaluation, DB-backed prediction persistence, artifact fallback views, model documentation, tests, and CI.
+This repository is an end-to-end hotel no-show prediction system. It covers leakage-safe feature engineering, temporal validation, calibrated risk scoring, threshold and Top-K evaluation, DB-backed prediction persistence, artifact fallback views, model documentation, tests, CI, and an operations dashboard.
 
-The project is framed as an applied ML engineering system: it connects model training to an operational dashboard where hotel teams can prioritize risky reservations and record follow-up actions.
+The project is built as an applied ML engineering system. Model training is connected to the day-to-day workflow where hotel teams review risky reservations and record follow-up actions.
 
 ## Project Purpose
 
-Hotels lose operational capacity and revenue when guests do not arrive without canceling. A useful no-show system should do more than train a classifier: it should produce auditable risk scores, explain the data availability policy, evaluate operational thresholds, persist predictions, and expose the results in workflows that operations teams can actually use.
+Hotels lose capacity and revenue when guests do not arrive without canceling. A useful no-show system needs to do more than train a classifier. It needs auditable risk scores, a clear data availability policy, operational thresholds, persisted predictions, and workflows that staff can actually use.
 
 This repository implements that path:
 
@@ -35,11 +35,11 @@ The active stages are:
 - `customer_pre_reservation`: customer-level no-show propensity before a specific reservation is finalized
 - `reservation_post_booking`: reservation-level no-show risk after a booking exists
 
-The legacy `booking_time` stage is retained for compatibility and leakage-safe baseline work.
+The legacy `booking_time` stage is still kept for compatibility and leakage-safe baseline work.
 
 ## Why It Matters
 
-No-show prediction is operationally valuable only when it supports a concrete action:
+No-show prediction is valuable only when it supports a concrete action:
 
 - contact the guest
 - verify guarantee or deposit details
@@ -47,7 +47,7 @@ No-show prediction is operationally valuable only when it supports a concrete ac
 - manage overbooking risk
 - measure action coverage and outcomes
 
-For that reason, this project evaluates not only ranking metrics, but also threshold behavior, action volume, Top-K capture, calibration, and persistence into a prediction store.
+For that reason, the project evaluates not only ranking metrics, but also threshold behavior, action volume, Top-K capture, calibration, and prediction-store persistence.
 
 ## Current Model Decision
 
@@ -107,7 +107,7 @@ Current threshold policy:
 ## Backend Structure
 
 - `app/api`: FastAPI route definitions
-- `app/core`: configuration
+- `app/core`: configuration and shared infrastructure
 - `app/db`: SQLAlchemy session and base setup
 - `app/models`: ORM models
 - `app/repositories`: data access and artifact views
@@ -138,7 +138,7 @@ The training pipeline:
 5. Excludes canceled rows from no-show training.
 6. Builds stage-specific features.
 7. Applies leakage guards.
-8. Uses temporal train/test split.
+8. Uses a temporal train/test split.
 9. Trains the Logistic Regression feeder.
 10. Trains CatBoost with the feeder score.
 11. Applies isotonic calibration.
@@ -263,7 +263,7 @@ Environment variable used by the frontend:
 
 ## Train Models
 
-The script downloads public H1/H2 CSVs when `--download-if-missing` is provided and local files are absent.
+The script downloads the public H1/H2 CSVs when `--download-if-missing` is provided and local files are absent.
 
 Train the customer-level stage:
 

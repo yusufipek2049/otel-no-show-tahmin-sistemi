@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.repositories.artifact_views import ArtifactViewRepository
 from app.repositories.actions import ActionsRepository
 from app.repositories.reservations import ReservationRepository, prediction_store_has_rows
+from app.core.logging import get_logger, log_event
 from app.schemas.reservations import (
     ReservationContext,
     ReservationDetailResponse,
@@ -18,6 +19,8 @@ from app.schemas.reservations import (
 )
 from app.training.constants import DEFAULT_ARTIFACTS_ROOT
 from app.training.stages import ModelStage
+
+logger = get_logger(__name__)
 
 
 class ReservationService:
@@ -31,14 +34,20 @@ class ReservationService:
     def _resolve_source(self) -> tuple[str, bool]:
         try:
             if prediction_store_has_rows(self.repository.db):
-                return "database_prediction_store", True
+                source = ("database_prediction_store", True)
+                logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[1]))
+                return source
         except SQLAlchemyError:
-            pass
+            logger.warning(log_event("scoring_source_resolution_failed", source="database_prediction_store"))
 
         if self.artifact_repository.exists():
-            return "artifact_fallback", False
+            source = ("artifact_fallback", False)
+            logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[1]))
+            return source
 
-        return "database_bootstrap", True
+        source = ("database_bootstrap", True)
+        logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[1]))
+        return source
 
     def list_reservations(
         self,
@@ -76,6 +85,7 @@ class ReservationService:
                 limit=limit,
             )
         except SQLAlchemyError:
+            logger.warning(log_event("reservation_list_database_unavailable", fallback="empty_response"))
             total, items = 0, []
 
         return ReservationListResponse(
@@ -155,6 +165,7 @@ class ReservationService:
         try:
             actions = self.actions_repository.list_reservation_actions(reservation_id)
         except SQLAlchemyError:
+            logger.warning(log_event("reservation_actions_database_unavailable", reservation_id=reservation_id))
             actions = []
 
         return ReservationDetailResponse(

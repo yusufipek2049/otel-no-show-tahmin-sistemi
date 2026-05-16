@@ -17,15 +17,15 @@ Use one final model architecture:
 
 Logistic Regression is an internal feeder model, not a displayed candidate.
 
-## Expert Rationale
+## Rationale
 
-This follows common ML engineering practice:
+The decision follows standard ML engineering practice:
 
-- begin with a clear target and leakage policy
-- prefer temporal validation for future-facing predictions
-- make the model card and dataset assumptions explicit
-- keep threshold selection tied to operational capacity
-- calibrate probability-like scores before using fixed thresholds
+- start with a clear target and leakage policy
+- use temporal validation for future-facing predictions
+- document model and dataset assumptions explicitly
+- tie threshold selection to operational capacity
+- calibrate probability-like scores before relying on fixed thresholds
 - monitor drift and data quality after training
 
 Useful external references:
@@ -51,13 +51,13 @@ Current fixed policy:
 
 1. Build stage-specific features.
 2. Block leakage columns.
-3. Train Logistic Regression feeder.
+3. Train the Logistic Regression feeder.
 4. Generate out-of-fold feeder scores when feasible.
 5. Add `logistic_regression_score` to CatBoost features.
 6. Train CatBoost.
 7. Generate out-of-fold CatBoost scores for calibration.
-8. Fit isotonic calibrator.
-9. Score test split and write artifacts.
+8. Fit the isotonic calibrator.
+9. Score the test split and write artifacts.
 
 ## Go / No-Go Gates
 

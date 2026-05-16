@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     frontend_base_url: str = Field(default="http://localhost:3000", alias="FRONTEND_BASE_URL")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     model_config = SettingsConfigDict(
         env_file=ROOT_DIR / ".env",

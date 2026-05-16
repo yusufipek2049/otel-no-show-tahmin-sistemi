@@ -7,8 +7,11 @@ from app.repositories.artifact_views import ArtifactViewRepository
 from app.repositories.dashboard import DashboardRepository
 from app.repositories.reservations import prediction_store_has_rows
 from app.schemas.dashboard import DashboardKpis, DashboardSummaryResponse
+from app.core.logging import get_logger, log_event
 from app.training.constants import DEFAULT_ARTIFACTS_ROOT
 from app.training.stages import ModelStage
+
+logger = get_logger(__name__)
 
 
 class DashboardService:
@@ -21,14 +24,20 @@ class DashboardService:
     def _resolve_source(self) -> tuple[str, str, bool]:
         try:
             if prediction_store_has_rows(self.repository.db):
-                return "database_prediction_store", "ready", True
+                source = ("database_prediction_store", "ready", True)
+                logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[2]))
+                return source
         except SQLAlchemyError:
-            pass
+            logger.warning(log_event("scoring_source_resolution_failed", source="database_prediction_store"))
 
         if self.artifact_repository.exists():
-            return "artifact_fallback", "artifact_fallback", False
+            source = ("artifact_fallback", "artifact_fallback", False)
+            logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[2]))
+            return source
 
-        return "database_bootstrap", "awaiting_predictions", False
+        source = ("database_bootstrap", "awaiting_predictions", False)
+        logger.info(log_event("scoring_source_resolved", source=source[0], action_support_enabled=source[2]))
+        return source
 
     def get_summary(self) -> DashboardSummaryResponse:
         data_source, scoring_status, action_support_enabled = self._resolve_source()
@@ -48,6 +57,7 @@ class DashboardService:
                 action_support_enabled=action_support_enabled,
             )
         except SQLAlchemyError:
+            logger.warning(log_event("dashboard_summary_database_unavailable", fallback="database_bootstrap"))
             return DashboardSummaryResponse(
                 kpis=DashboardKpis(
                     total_reservations=0,

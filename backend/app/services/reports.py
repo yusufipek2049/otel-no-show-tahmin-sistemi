@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger, log_event
 from app.repositories.artifact_views import ArtifactViewRepository
 from app.repositories.reports import ReportsRepository
 from app.schemas.reports import (
@@ -14,6 +15,8 @@ from app.schemas.reports import (
 )
 from app.training.constants import DEFAULT_ARTIFACTS_ROOT
 from app.training.stages import ModelStage
+
+logger = get_logger(__name__)
 
 
 class ReportsService:
@@ -32,19 +35,27 @@ class ReportsService:
     def _reporting_source(self) -> tuple[str, bool]:
         try:
             if self.repository.has_prediction_data():
-                return "database_prediction_store", True
+                source = ("database_prediction_store", True)
+                logger.info(log_event("reporting_source_resolved", source=source[0], action_support_enabled=source[1]))
+                return source
         except SQLAlchemyError:
-            pass
+            logger.warning(log_event("reporting_source_resolution_failed", source="database_prediction_store"))
 
         if self.artifact_repository.exists():
-            return "artifact_fallback", False
+            source = ("artifact_fallback", False)
+            logger.info(log_event("reporting_source_resolved", source=source[0], action_support_enabled=source[1]))
+            return source
 
-        return "database_bootstrap", False
+        source = ("database_bootstrap", False)
+        logger.info(log_event("reporting_source_resolved", source=source[0], action_support_enabled=source[1]))
+        return source
 
     def get_benchmark_report(self, stage: str | None = None) -> BenchmarkReportResponse:
         artifact_repository = self._artifact_repository_for_stage(stage)
         if artifact_repository.exists():
+            logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.RESERVATION_POST_BOOKING.value, source="artifact_fallback"))
             return BenchmarkReportResponse.model_validate(artifact_repository.get_benchmark_report())
+        logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.RESERVATION_POST_BOOKING.value, source="database_bootstrap"))
         return BenchmarkReportResponse.model_validate(self.repository.get_bootstrap_benchmark_report())
 
     def get_operations_summary(self) -> OperationsSummaryResponse:

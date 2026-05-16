@@ -1,107 +1,119 @@
 # Data Mapping
 
 ## Purpose
-This file explains how the current CSV structure should be interpreted and mapped into the internal no-show system.
 
-The current local dataset comes from two files:
+This document explains how the current CSV files are interpreted inside the no-show system. It is meant to keep ingestion, cleaning, feature building, and model training aligned.
+
+The local proof-of-concept data comes from:
+
 - `H1.csv`
 - `H2.csv`
 
-They share the same 31-column structure.
+Both files use the same 31-column public hotel booking demand structure.
 
----
+## Raw Data Notes
 
-## Raw data notes
-Observed issues that the import pipeline must handle:
+The CSVs are useful, but they are not clean application data. The import pipeline must handle:
 
-- many string values contain right-padded whitespace
-- some null-like values are represented as string placeholders such as `"NULL"`
-- some numeric-looking identifiers are stored as strings with padding
-- there may be sparse categories and high-cardinality ID-like fields
+- right-padded string values
+- null-like placeholders such as `"NULL"`
+- numeric-looking identifiers stored as padded strings
+- sparse categories and high-cardinality ID-like fields
 
-Do not model directly on raw strings without normalization.
+Do not train directly on raw strings. Normalize first, while keeping enough raw context for traceability.
 
 Recommended normalization:
+
 - trim whitespace
 - convert null-like placeholders to real missing values
-- preserve the raw value in raw storage if needed
+- preserve raw values in the raw layer
 - create clean normalized columns for modeling
 
----
+## Modeling Objective
 
-## Modeling objective
-This project is not a generic cancellation model.
+This project is a no-show model, not a generic cancellation model.
 
-The no-show modeling target is:
+The target is:
+
 - `no_show_flag = 1` for `ReservationStatus == "No-Show"`
 - `no_show_flag = 0` for `ReservationStatus == "Check-Out"`
 
-Rows with:
-- `ReservationStatus == "Canceled"`
+Rows with `ReservationStatus == "Canceled"` are excluded from the no-show training dataset.
 
-should be excluded from the no-show training dataset.
+Cancellation can be modeled later if the product needs it, but it should be treated as a separate outcome.
 
-Canceled can be modeled later as a separate target if the product needs cancellation prediction.
+## Internal Layers
 
----
+### 1. Raw Import Layer
 
-## Suggested internal layers
+Purpose:
 
-### 1. Raw import layer
-Example purpose:
-- preserve imported rows as close to source as possible
+- preserve imported rows close to the source files
 - support traceability and reprocessing
 
 Suggested table / object:
+
 - `reservations_raw`
 
-### 2. Clean reservation layer
-Example purpose:
+### 2. Clean Reservation Layer
+
+Purpose:
+
 - normalize types
 - normalize categories
-- create canonical booking-time fields
+- create canonical reservation fields
 
 Suggested table / object:
+
 - `reservations_clean`
 
-### 3. Feature layer
-Example purpose:
+### 3. Feature Layer
+
+Purpose:
+
 - derive model features
 - enforce exclusion rules
-- support reproducible train/inference transforms
+- keep train and inference transforms reproducible
 
 Suggested table / object:
+
 - `reservation_features`
 
-### 4. Prediction layer
-Example purpose:
-- persist score outputs and model versions
+### 4. Prediction Layer
+
+Purpose:
+
+- store scores, risk classes, thresholds, and model versions
 
 Suggested table / object:
+
 - `predictions`
 
-### 5. Operational event layer
-Example purpose:
-- provide real timestamped signals for post-booking scoring
-- replace synthetic proxy features used in the proof-of-concept
+### 5. Operational Event Layer
 
-Suggested sources:
+Purpose:
+
+- provide real timestamped signals for post-booking scoring
+- replace the synthetic proxies used in the proof-of-concept
+
+Expected sources:
+
 - payment attempts
 - guest contact history
 - campaign exposure
 - guarantee / deposit workflow
 - reservation change events
 
----
+## Column Guidance
 
-## Column guidance
+### Important Target-Related Columns
 
-### Important target-related columns
 - `ReservationStatus` -> source for target construction; not a feature
 - `ReservationStatusDate` -> metadata / analysis only; not a feature
-- `IsCanceled` -> do not use as a feature for the no-show model
+- `IsCanceled` -> not a feature for the no-show model
 
-### Strong candidate predictors
+### Strong Candidate Predictors
+
 - `LeadTime`
 - `ArrivalDateYear`
 - `ArrivalDateMonth`
@@ -128,15 +140,17 @@ Suggested sources:
 - `RequiredCarParkingSpaces`
 - `TotalOfSpecialRequests`
 
-### Candidate later-stage-only predictors
+### Later-Stage-Only Predictors
+
 - `BookingChanges`
 - `DaysInWaitingList`
 - `AssignedRoomType`
 
-These fields are safe only when represented as as-of snapshot fields. Final-state values must not be used for earlier scoring cutoffs.
+These are safe only when represented as timestamped as-of snapshot fields. Final-state values must not be used for earlier scoring cutoffs.
 
-### Operational signal predictors
-Current architecture expects these signal families:
+### Operational Signal Predictors
+
+The architecture expects these signal families:
 
 - customer identity
 - payment failure
@@ -145,12 +159,11 @@ Current architecture expects these signal families:
 - channel campaign pressure
 - guarantee / deposit detail
 
-In the public H1/H2 dataset these are synthetic proxies. In production they must come from timestamped operational systems.
+In H1/H2 these are synthetic proxies. In production they must come from timestamped operational systems.
 
----
+## Internal Schema Mapping Suggestions
 
-## Internal schema mapping suggestions
-These do not need to exactly match the final production schema, but they should be stable enough for the proof of concept.
+These names do not have to be the final production schema, but they should stay stable for the proof-of-concept.
 
 | Internal field | Suggested source |
 |---|---|
@@ -183,13 +196,13 @@ These do not need to exactly match the final production schema, but they should 
 | `total_special_requests` | `TotalOfSpecialRequests` |
 | `no_show_flag` | derived from `ReservationStatus` |
 
----
+## Import Requirements
 
-## Import requirements
 Import code must:
+
 1. preserve raw data
 2. normalize text fields
 3. log import batches
 4. support reproducible re-runs
-5. clearly separate target construction from feature generation
-6. document any dropped rows and why they were dropped
+5. keep target construction separate from feature generation
+6. document dropped rows and exclusion reasons

@@ -22,7 +22,7 @@ Out of scope:
 
 ## V1 Definition
 
-V1 means:
+V1 means the system can:
 
 - ingest hotel reservation data
 - build leakage-safe feature tables
@@ -41,7 +41,7 @@ Mostly present:
 - feature generation
 - temporal split
 - `catboost_with_logistic_score` training
-- logistic feeder score
+- Logistic Regression feeder score
 - isotonic calibration
 - artifact persistence
 - dashboard
@@ -54,15 +54,15 @@ Mostly present:
 
 Still weak or incomplete:
 
-- true live scoring job is not separated from training strongly enough
+- true live scoring is not separated from training strongly enough
 - artifact fallback is read-only
-- auth and role-based access are not complete
+- authentication and role-based access are not complete
 - real CRM/payment/contact/campaign/deposit data is not connected
 - synthetic operational signals must be replaced before production claims
 
 ## V2 Definition
 
-V2 means management visibility on top of the operational no-show system.
+V2 adds management visibility on top of the operational no-show workflow.
 
 Currently present:
 

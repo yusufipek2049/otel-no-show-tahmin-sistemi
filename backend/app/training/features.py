@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.core.logging import get_logger, log_event
 from app.training.constants import HIGH_SEASON_MONTHS, MONTH_NAME_TO_NUMBER, NULL_LIKE_VALUES, RAW_NUMERIC_COLUMNS, RESERVATION_KEY_COLUMN, SOURCE_FILE_TO_PROPERTY_ID
 from app.training.schemas import DatasetBundle
 from app.training.stages import (
@@ -15,6 +16,8 @@ from app.training.stages import (
     StageFeaturePolicy,
     get_model_stage_config,
 )
+
+logger = get_logger(__name__)
 
 
 def _unique_columns(columns: list[str]) -> list[str]:
@@ -412,19 +415,58 @@ def enforce_feature_policy(modeling_df: pd.DataFrame, feature_policy: StageFeatu
 
     present_internal_exclusions = sorted(set(feature_policy.excluded_internal_columns).intersection(columns_to_validate))
     if present_internal_exclusions:
+        logger.error(
+            log_event(
+                "feature_policy_validation_failed",
+                reason="internal_leakage_columns_present",
+                columns=",".join(present_internal_exclusions),
+            )
+        )
         raise ValueError(f"Leakage-prone internal columns found in modeling frame: {present_internal_exclusions}")
 
     present_source_exclusions = sorted(set(feature_policy.excluded_source_columns).intersection(columns_to_validate))
     if present_source_exclusions:
+        logger.error(
+            log_event(
+                "feature_policy_validation_failed",
+                reason="source_leakage_columns_present",
+                columns=",".join(present_source_exclusions),
+            )
+        )
         raise ValueError(f"Leakage-prone source columns found in modeling frame: {present_source_exclusions}")
 
     missing_expected = sorted(set(feature_policy.model_feature_columns).difference(columns_to_validate))
     if missing_expected:
+        logger.error(
+            log_event(
+                "feature_policy_validation_failed",
+                reason="expected_features_missing",
+                columns=",".join(missing_expected),
+            )
+        )
         raise ValueError(f"Expected feature columns are missing: {missing_expected}")
+
+    logger.info(
+        log_event(
+            "feature_policy_validated",
+            feature_count=len(feature_policy.model_feature_columns),
+            feature_set_version=feature_policy.feature_set_version,
+        )
+    )
 
 
 def prepare_modeling_dataset(feature_df: pd.DataFrame, stage_config: ModelStageConfig) -> pd.DataFrame:
     feature_policy = stage_config.feature_policy
+    excluded_rows = int(feature_df["excluded_from_training"].sum())
+    if excluded_rows:
+        logger.warning(
+            log_event(
+                "rows_excluded_from_training",
+                count=excluded_rows,
+                reason="canceled_or_unsupported_status",
+                stage=stage_config.stage.value,
+            )
+        )
     modeling_df = feature_df.loc[~feature_df["excluded_from_training"]].copy()
     modeling_df["no_show_flag"] = modeling_df["no_show_flag"].astype(int)
 

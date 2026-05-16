@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines which features are allowed for staged no-show prediction and which fields are blocked because of leakage or time-of-availability risk.
+This document defines which features are allowed for staged no-show prediction and which fields are blocked because they leak the outcome or are not available at scoring time.
 
 ## Hard Exclusions
 
@@ -13,9 +13,7 @@ Never use these as model features:
 - `IsCanceled`
 - `no_show_flag`
 
-Reason:
-
-- they directly encode the target or reveal final outcome state
+These fields either encode the target directly or reveal final outcome state.
 
 ## Active Stages
 
@@ -61,7 +59,7 @@ Allowed feature groups:
 
 The public H1/H2 dataset does not contain real CRM, payment, messaging, campaign, or deposit event logs.
 
-Current operational signals are therefore synthetic proxies generated for system design and model architecture validation. In a production project, these fields must be replaced by timestamped source data:
+The current operational signals are synthetic proxies built so the system design, feature contracts, API surfaces, and UI workflows can be validated. In production, these fields must be replaced by timestamped source data from:
 
 - customer master data
 - PMS reservation event history
@@ -70,7 +68,7 @@ Current operational signals are therefore synthetic proxies generated for system
 - campaign exposure logs
 - deposit and guarantee workflows
 
-Synthetic signals must be marked as such in model documentation and must not be treated as proven production predictors.
+Synthetic signals must be marked as synthetic in model documentation and must not be treated as proven production predictors.
 
 ## Booking-Time Compatibility Policy
 
@@ -101,9 +99,7 @@ Excluded from booking-time:
 - `DaysInWaitingList`
 - `AssignedRoomType`
 
-Reason:
-
-- they may be created or updated after booking
+These fields may be created or updated after booking, so final-state values are not safe for a booking-time model.
 
 ## Snapshot Stages
 

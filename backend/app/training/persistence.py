@@ -12,9 +12,12 @@ import pandas as pd
 from sqlalchemy import create_engine, insert, select
 from sqlalchemy.orm import sessionmaker
 
+from app.core.logging import get_logger, log_event, mask_database_url
 from app.db.base import Base
 from app.models.prediction import Prediction
 from app.models.reservation import ReservationClean, ReservationFeature, ReservationImportBatch, ReservationRaw
+
+logger = get_logger(__name__)
 
 
 def to_native_value(value: Any) -> Any:
@@ -82,6 +85,15 @@ def persist_training_outputs_to_database(
     feature_set_version: str,
     source_name: str = "hotel_booking_demand_h1_h2",
 ) -> dict[str, int]:
+    logger.info(
+        log_event(
+            "database_persistence_started",
+            database=mask_database_url(database_url),
+            raw_rows=len(raw_df),
+            clean_rows=len(clean_df),
+            feature_rows=len(feature_df),
+        )
+    )
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
@@ -119,6 +131,7 @@ def persist_training_outputs_to_database(
             )
         session.execute(insert(ReservationRaw), raw_records)
         session.flush()
+        logger.info(log_event("database_raw_rows_persisted", rows=len(raw_records)))
 
         raw_id_map = {
             (row.source_file, row.source_row_number): row.id
@@ -177,6 +190,7 @@ def persist_training_outputs_to_database(
             )
         session.execute(insert(ReservationClean), clean_records)
         session.flush()
+        logger.info(log_event("database_clean_rows_persisted", rows=len(clean_records)))
 
         clean_id_map = {
             (row.source_file, row.source_row_number): row.id
@@ -223,6 +237,7 @@ def persist_training_outputs_to_database(
             )
         session.execute(insert(ReservationFeature), feature_records)
         session.flush()
+        logger.info(log_event("database_feature_rows_persisted", rows=len(feature_records)))
 
         feature_id_map = {
             (row.source_file, row.source_row_number): row.id
@@ -267,11 +282,22 @@ def persist_training_outputs_to_database(
             total_prediction_rows += len(prediction_records)
 
         session.commit()
+        logger.info(log_event("database_prediction_rows_persisted", rows=total_prediction_rows))
 
-        return {
+        summary = {
             "reservation_import_batches": 1,
             "reservations_raw": len(raw_records),
             "reservations_clean": len(clean_records),
             "reservation_features": len(feature_records),
             "predictions": total_prediction_rows,
         }
+        logger.info(
+            log_event(
+                "database_persistence_completed",
+                raw=summary["reservations_raw"],
+                clean=summary["reservations_clean"],
+                features=summary["reservation_features"],
+                predictions=summary["predictions"],
+            )
+        )
+        return summary

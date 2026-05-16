@@ -4,12 +4,15 @@ from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger, log_event
 from app.repositories.actions import ActionsRepository
 from app.schemas.actions import (
     ReservationActionCreateRequest,
     ReservationActionResponse,
     ReservationActionUpdateRequest,
 )
+
+logger = get_logger(__name__)
 
 
 def _to_action_response(action) -> ReservationActionResponse:
@@ -60,8 +63,18 @@ class ActionsService:
                 payload=payload.payload,
             )
         except SQLAlchemyError as exc:
+            logger.exception(log_event("reservation_action_create_failed", reservation_id=reservation_id))
             raise HTTPException(status_code=503, detail="Database is not available yet") from exc
 
+        logger.info(
+            log_event(
+                "reservation_action_created",
+                reservation_id=reservation_id,
+                action_id=action.id,
+                action_type=action.action_type,
+                status=action.action_status,
+            )
+        )
         return _to_action_response(action)
 
     def update_action(
@@ -80,6 +93,8 @@ class ActionsService:
                 action_note=payload.action_note,
             )
         except SQLAlchemyError as exc:
+            logger.exception(log_event("reservation_action_update_failed", action_id=action_id))
             raise HTTPException(status_code=503, detail="Database is not available yet") from exc
 
+        logger.info(log_event("reservation_action_updated", action_id=updated.id, status=updated.action_status))
         return _to_action_response(updated)

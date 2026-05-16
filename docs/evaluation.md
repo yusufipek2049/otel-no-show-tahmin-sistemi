@@ -2,22 +2,22 @@
 
 ## Objective
 
-Evaluation must answer two questions:
+Evaluation needs to answer two practical questions:
 
-- Can the model rank likely no-shows above likely arrivals?
-- At the chosen action threshold, is the operational workload worth the captured no-show volume?
+- Can the model rank likely no-shows ahead of likely arrivals?
+- At the chosen action threshold, is the workload worth the no-shows captured?
 
-This is a rare-event problem. Accuracy is not a useful decision metric.
+This is a rare-event problem, so accuracy is not a useful decision metric.
 
 ## Evaluation Layers
 
 ### 1. Ranking Quality
 
-Primary:
+Primary metric:
 
 - PR-AUC
 
-Secondary:
+Secondary metric:
 
 - ROC-AUC
 
@@ -65,14 +65,14 @@ Scores are direct no-show probabilities. Higher means higher no-show risk.
 
 ## Split
 
-Random split is not allowed for model quality claims.
+Random split is not allowed for headline quality claims.
 
 Current split:
 
 - train: 2015, 2016
 - test: 2017
 
-All headline metrics must be reported on the temporal test split.
+All headline metrics must come from the temporal test split.
 
 ## Model Under Evaluation
 
@@ -89,7 +89,7 @@ Evaluate stages separately:
 - `customer_pre_reservation`
 - `reservation_post_booking`
 
-Do not merge their metrics into one leaderboard. They answer different operational questions and have different feature availability.
+Do not merge their metrics into one leaderboard. They answer different operational questions and use different feature-availability policies.
 
 ## Required Outputs
 
@@ -107,16 +107,16 @@ Each training run should produce:
 - `threshold_policy.json`
 - `stacking_summary.json`
 
-These are training artifacts for auditability. Product-facing summaries should stay concise and should not expose unnecessary model internals.
+These artifacts support auditability. Product-facing summaries should stay concise and avoid unnecessary model internals.
 
 ## Decision Rules
 
 A stage should not be promoted if:
 
-- PR-AUC is near random for the class prevalence
+- PR-AUC is close to random for the class prevalence
 - calibrated scores are badly misaligned with observed rates
-- the action threshold creates too many actions for operations
-- top-k recall does not improve manual review prioritization
-- drift indicates the test period is materially different from training without an explanation
+- the action threshold creates more work than operations can handle
+- Top-K recall does not improve manual review prioritization
+- drift shows a materially different test period without a clear explanation
 
-Thresholds can be adjusted without retraining. Feature set, target, split, model parameters, and calibration changes require a new training run.
+Thresholds can be adjusted without retraining. Changes to the feature set, target, split, model parameters, or calibration require a new training run.

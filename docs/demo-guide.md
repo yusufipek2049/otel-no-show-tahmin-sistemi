@@ -1,6 +1,6 @@
 # Demo Guide
 
-This guide describes how to run a local demo of the hotel no-show prediction and operations dashboard.
+This guide walks through a local demo of the hotel no-show prediction and operations dashboard.
 
 ## Start The Backend
 
@@ -25,7 +25,7 @@ Backend defaults:
 
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/api/v1/health`
+- health check: `http://localhost:8000/api/v1/health`
 
 ## Start The Frontend
 
@@ -39,7 +39,7 @@ Frontend default:
 
 - `http://localhost:3000`
 
-If the backend runs on a different URL, set:
+If the backend runs somewhere else, set:
 
 ```bash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
@@ -82,11 +82,11 @@ python3 -m app.jobs.train_booking_time_no_show \
   --database-url "postgresql+psycopg://postgres:postgres@localhost:5432/hotel_no_show"
 ```
 
-When prediction rows exist in the database, the app uses the DB-backed prediction store. If not, it falls back to the latest training artifacts in read-only mode.
+When prediction rows exist in the database, the app reads operational queues from the DB-backed prediction store. When they do not, it reads the latest artifacts in read-only fallback mode.
 
-## Screens To Show In A Demo
+## Screens To Show
 
-Recommended order:
+A clear demo flow is:
 
 1. `/dashboard`
 2. `/reservation-risk`
@@ -96,10 +96,10 @@ Recommended order:
 6. `/reports`
 7. Swagger: `/docs`
 
-What each screen demonstrates:
+What each screen shows:
 
 - `/dashboard`: operational queue and high-risk reservation summary
-- `/reservation-risk`: reservation-level no-show model quality and threshold behavior
+- `/reservation-risk`: reservation-level model quality and threshold behavior
 - `/reservations`: filterable reservation queue
 - `/reservations/[reservationId]`: reservation context and staff action workflow
 - `/customer-risk`: customer-level pre-reservation risk view
@@ -110,7 +110,7 @@ What each screen demonstrates:
 
 **0:00-0:25 Problem**
 
-Hotels need to identify high-risk reservations at booking time and after booking, before those reservations become no-shows. The system turns no-show prediction into an operational queue, not just a model notebook.
+Hotels need to find high-risk reservations before those reservations turn into no-shows. This system turns prediction into an operations queue instead of leaving it as a notebook model.
 
 **0:25-0:55 Training**
 
@@ -118,21 +118,20 @@ The training pipeline builds leakage-safe features, excludes canceled reservatio
 
 **0:55-1:20 Evaluation**
 
-The evaluation focuses on rare-event and operations metrics: PR-AUC, threshold precision and recall, Top-K capture, calibration, Brier score, and action volume. The score is direct no-show probability.
+Evaluation focuses on rare-event and operations metrics: PR-AUC, threshold precision and recall, Top-K capture, calibration, Brier score, and action volume. Scores are direct no-show probabilities.
 
 **1:20-1:45 Serving**
 
-Predictions can be persisted to PostgreSQL. When the prediction store is populated, the application serves risk queues from the database. For local demos, the app can also read the latest training artifacts as a fallback.
+Predictions can be persisted to PostgreSQL. When the store is populated, the application serves risk queues from the database. For local demos, the same screens can read latest training artifacts as a fallback.
 
 **1:45-2:15 Dashboard**
 
-The operations team reviews high-risk reservations in the dashboard, sees the current scoring source, and uses filters and reservation detail pages to decide what to inspect first.
+The operations team reviews high-risk reservations, sees the current scoring source, and uses filters plus detail pages to decide what needs attention first.
 
 **2:15-2:40 Actions**
 
-Staff can record interventions such as calls, messages, deposit requests, or manual review. This connects model output to an auditable operational workflow.
+Staff can record interventions such as calls, messages, deposit requests, or manual review. That connects model output to an auditable workflow.
 
 **2:40-3:00 Reports**
 
-The reports page shows model quality, threshold behavior, Top-K capture, no-show trends, channel and segment breakdowns, and action effectiveness summaries. This closes the loop between model training and operational monitoring.
-
+The reports page shows model quality, threshold behavior, Top-K capture, no-show trends, channel and segment breakdowns, and action effectiveness summaries. It closes the loop between training and operations.

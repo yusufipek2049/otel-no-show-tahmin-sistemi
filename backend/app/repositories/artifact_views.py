@@ -10,7 +10,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.core.logging import get_logger, log_event
 from app.training.constants import DEFAULT_ARTIFACTS_ROOT
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -75,7 +78,10 @@ class ArtifactViewRepository:
 
     def exists(self) -> bool:
         paths = self.get_paths()
-        return paths.evaluation_summary.exists() and paths.clean_dataset.exists()
+        exists = paths.evaluation_summary.exists() and paths.clean_dataset.exists()
+        if not exists:
+            logger.warning(log_event("artifact_view_missing", root=paths.root))
+        return exists
 
     def _load_json(self, path: Path) -> dict[str, Any]:
         return _read_json_cached(*_path_signature(path))
@@ -84,7 +90,15 @@ class ArtifactViewRepository:
         return _read_csv_cached(*_path_signature(path)).copy()
 
     def get_evaluation_summary(self) -> dict[str, Any]:
-        return self._load_json(self.get_paths().evaluation_summary)
+        summary = self._load_json(self.get_paths().evaluation_summary)
+        logger.info(
+            log_event(
+                "artifact_view_loaded",
+                root=self.root,
+                recommended_model=summary.get("recommended_model", "catboost_with_logistic_score"),
+            )
+        )
+        return summary
 
     def get_recommended_model_name(self) -> str:
         summary = self.get_evaluation_summary()
@@ -106,6 +120,7 @@ class ArtifactViewRepository:
         prediction_frame["scored_at"] = pd.to_datetime(prediction_frame["scored_at"], errors="coerce", utc=True)
         prediction_frame["score"] = pd.to_numeric(prediction_frame["score"], errors="coerce")
         prediction_frame["threshold_used"] = pd.to_numeric(prediction_frame["threshold_used"], errors="coerce")
+        logger.info(log_event("artifact_predictions_loaded", root=self.root, model_name=selected_model, rows=len(prediction_frame)))
         return prediction_frame
 
     def get_clean_dataset(self) -> pd.DataFrame:

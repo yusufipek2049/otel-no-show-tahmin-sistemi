@@ -16,6 +16,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from app.core.logging import get_logger, log_event
 from app.training.constants import (
     ACTION_THRESHOLD,
     CALIBRATION_METHOD,
@@ -36,6 +37,8 @@ from app.training.evaluation import (
 from app.training.persistence import dataframe_to_json_records, refresh_latest_artifacts, write_dataframe, write_json
 from app.training.schemas import ModelRunArtifacts, TemporalSplitBundle, TrainingRunArtifacts
 from app.training.stages import ModelStageConfig
+
+logger = get_logger(__name__)
 
 
 FEATURE_PERCENTILE_POINTS = (0.01, 0.05, 0.10, 0.20, 0.25, 0.33, 0.50, 0.66, 0.75, 0.80, 0.90, 0.95, 0.99)
@@ -101,6 +104,7 @@ def _train_logistic_regression(
     X_test, _ = _prepare_model_inputs(split_bundle.test_df, stage_config)
 
     fold_count = _resolve_cv_fold_count(y_train)
+    logger.info(log_event("feeder_training_started", cv_folds=fold_count, train_rows=len(X_train)))
     train_probabilities = np.full(len(X_train), np.nan)
     if fold_count:
         cv = StratifiedKFold(n_splits=fold_count, shuffle=True, random_state=42)
@@ -119,6 +123,13 @@ def _train_logistic_regression(
         "stacking_score_source": "out_of_fold" if fold_count else "in_sample_fallback",
         "cv_folds": fold_count,
     }
+    logger.info(
+        log_event(
+            "feeder_training_completed",
+            model_name="logistic_regression",
+            score_source=diagnostics["stacking_score_source"],
+        )
+    )
     return pipeline, train_probabilities, test_probabilities, diagnostics
 
 
@@ -156,9 +167,18 @@ def _train_catboost(
         verbose=False,
         allow_writing_files=False,
     )
+    logger.info(
+        log_event(
+            "catboost_training_started",
+            model_name="catboost_with_logistic_score",
+            train_rows=len(X_train),
+            test_rows=len(X_test),
+        )
+    )
     model.fit(X_train, y_train, cat_features=cat_features)
     train_probabilities = model.predict_proba(X_train)[:, 1]
     test_probabilities = model.predict_proba(X_test)[:, 1]
+    logger.info(log_event("catboost_training_completed", model_name="catboost_with_logistic_score"))
     return model, train_probabilities, test_probabilities
 
 
@@ -179,6 +199,7 @@ def _train_catboost_oof_predictions(split_bundle: TemporalSplitBundle, stage_con
     ]
 
     fold_count = _resolve_cv_fold_count(y_train)
+    logger.info(log_event("catboost_oof_started", cv_folds=fold_count, train_rows=len(X_train)))
     oof_probabilities = np.full(len(X_train), np.nan)
     if fold_count:
         cv = StratifiedKFold(n_splits=fold_count, shuffle=True, random_state=42)
@@ -201,12 +222,21 @@ def _train_catboost_oof_predictions(split_bundle: TemporalSplitBundle, stage_con
         "calibration_score_source": "catboost_out_of_fold" if fold_count else "catboost_in_sample_fallback",
         "cv_folds": fold_count,
     }
+    logger.info(log_event("catboost_oof_completed", score_source=diagnostics["calibration_score_source"]))
     return oof_probabilities, diagnostics
 
 
 def _fit_score_calibrator(scores: np.ndarray, y_true: pd.Series) -> tuple[IsotonicRegression | None, dict[str, Any]]:
     valid_mask = ~np.isnan(scores)
     if CALIBRATION_METHOD != "isotonic" or valid_mask.sum() < 10 or y_true.nunique() < 2:
+        logger.warning(
+            log_event(
+                "calibration_skipped",
+                method=CALIBRATION_METHOD,
+                rows=int(valid_mask.sum()),
+                reason="insufficient_oof_scores_or_single_class",
+            )
+        )
         return None, {
             "method": "none",
             "reason": "insufficient_oof_scores_or_single_class",
@@ -214,6 +244,7 @@ def _fit_score_calibrator(scores: np.ndarray, y_true: pd.Series) -> tuple[Isoton
 
     calibrator = IsotonicRegression(out_of_bounds="clip")
     calibrator.fit(scores[valid_mask], y_true.to_numpy()[valid_mask])
+    logger.info(log_event("calibration_fitted", method=CALIBRATION_METHOD, rows=int(valid_mask.sum())))
     return calibrator, {
         "method": CALIBRATION_METHOD,
         "fit_row_count": int(valid_mask.sum()),
@@ -428,6 +459,15 @@ def run_training_pipeline(
     for directory in (models_dir, reports_dir, predictions_dir, datasets_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
+    logger.info(
+        log_event(
+            "training_pipeline_started",
+            model_stage=stage_config.stage.value,
+            train_rows=len(split_bundle.train_df),
+            test_rows=len(split_bundle.test_df),
+            run_dir=run_dir,
+        )
+    )
     logistic_model, logistic_train_probabilities, logistic_probabilities, feeder_diagnostics = _train_logistic_regression(
         split_bundle,
         stage_config,
@@ -595,6 +635,16 @@ def run_training_pipeline(
     )
 
     refresh_latest_artifacts(run_dir, latest_dir)
+    logger.info(
+        log_event(
+            "artifacts_written",
+            reports_dir=reports_dir,
+            models_dir=models_dir,
+            predictions_dir=predictions_dir,
+            recommended_model=recommended_model,
+        )
+    )
+    logger.info(log_event("training_pipeline_completed", model_stage=stage_config.stage.value, run_dir=run_dir))
 
     return (
         TrainingRunArtifacts(

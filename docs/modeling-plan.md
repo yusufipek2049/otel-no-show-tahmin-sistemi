@@ -2,12 +2,12 @@
 
 ## Current Decision
 
-The project is a staged no-show prediction system, not a cancellation model and not a generic BI product.
+This project is a staged no-show prediction system. It is not a cancellation model and it is not a generic BI product.
 
 Active production-style stages:
 
 - `customer_pre_reservation`: customer-level no-show propensity before a specific reservation is finalized.
-- `reservation_post_booking`: reservation-level no-show risk after booking, with operational signals.
+- `reservation_post_booking`: reservation-level no-show risk after booking, using operational signals.
 
 Historical / optional stages:
 
@@ -33,7 +33,7 @@ The active model candidate is:
 
 - `catboost_with_logistic_score`
 
-Logistic Regression is not a separate model candidate. It is an internal feeder model:
+Logistic Regression is not a separate candidate. It is an internal feeder model:
 
 - trained on the same stage feature policy
 - used to produce `logistic_regression_score`
@@ -42,7 +42,7 @@ Logistic Regression is not a separate model candidate. It is an internal feeder 
 
 CatBoost output is calibrated with isotonic regression using out-of-fold CatBoost scores.
 
-This avoids presenting two independent candidates while still giving CatBoost a stable linear baseline signal.
+This keeps the product focused on one final model while still giving CatBoost a stable linear baseline signal.
 
 ## Split Policy
 
@@ -60,11 +60,11 @@ Reason:
 
 ## Training Policy
 
-Default expert stance:
+Default stance:
 
 - keep CatBoost as the only active final candidate
-- use early stopping instead of arbitrarily large brute-force training
-- tune only after the baseline feature contract and calibration are stable
+- use early stopping instead of large brute-force training
+- tune only after the feature contract and calibration are stable
 - compare by stage, not by a global leaderboard
 
 Controlled tuning is allowed only when it records:
@@ -75,7 +75,7 @@ Controlled tuning is allowed only when it records:
 - model parameters
 - threshold policy
 - calibration method
-- top-k and threshold metrics
+- Top-K and threshold metrics
 
 ## Threshold And Risk Semantics
 
@@ -89,7 +89,7 @@ Current policy:
 - `score >= 0.50`: notable risk
 - otherwise: low risk
 
-Thresholds are operational decisions. They can be changed without retraining, but their precision, recall, and action volume must be reviewed after every training run.
+Thresholds are operational decisions. They can be changed without retraining, but precision, recall, and action volume must be reviewed after every training run.
 
 ## Feature Policy
 
@@ -104,7 +104,7 @@ Hard leakage exclusions remain:
 - `IsCanceled`
 - direct final-state operational fields unless available at the scoring cutoff
 
-Operational signals such as payment failure, contact history, campaign pressure, and guarantee/deposit status are currently synthetic proxies when using public H1/H2 data. In a real deployment they must come from PMS, CRM, payment, messaging, and campaign systems with event timestamps.
+Operational signals such as payment failure, contact history, campaign pressure, and guarantee/deposit status are synthetic proxies when using public H1/H2 data. In a real deployment they must come from PMS, CRM, payment, messaging, and campaign systems with event timestamps.
 
 ## Evaluation Priority
 
@@ -116,7 +116,7 @@ Primary quality view:
 4. Calibration / Brier score
 5. ROC-AUC
 
-Accuracy is not a decision metric for this problem because no-show is a minority event.
+Accuracy is not a decision metric because no-show is a minority event.
 
 ## Minimum Acceptance
 
@@ -127,13 +127,13 @@ A trained stage is acceptable only if:
 - `catboost_with_logistic_score` trains end to end
 - Logistic Regression feeder uses out-of-fold scores when feasible
 - calibrated scores are reported
-- threshold and top-k tables are produced
+- threshold and Top-K tables are produced
 - feature drift and feature percentiles are available for review
 - score semantics remain direct no-show probability
 
 ## Production Caveats
 
-The current public dataset is final-state oriented and does not contain real payment attempts, contact events, campaign exposure logs, or as-of room assignment history.
+The public dataset is final-state oriented. It does not contain real payment attempts, contact events, campaign exposure logs, or as-of room assignment history.
 
 Therefore:
 

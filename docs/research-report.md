@@ -4,13 +4,13 @@
 
 This project implements an end-to-end hotel no-show prediction system that connects supervised tabular ML to operational decision support. The system includes leakage-safe feature engineering, temporal validation, calibrated risk scoring, threshold and Top-K evaluation, prediction persistence, artifact fallback views, a FastAPI backend, PostgreSQL schema, and a Next.js operations dashboard.
 
-The current proof-of-concept uses public hotel booking data and synthetic operational signal proxies. The architecture is designed to be replaced with timestamped production signals from PMS, CRM, payment, campaign, and action outcome systems.
+The current proof-of-concept uses public hotel booking data and synthetic operational signal proxies. The architecture is designed so those proxies can later be replaced with timestamped production signals from PMS, CRM, payment, campaign, and action outcome systems.
 
 ## Motivation
 
-Hotel no-shows create unused room capacity, staffing inefficiency, and revenue risk. A model is useful only if it can be translated into an operational queue with clear action thresholds, interpretable score semantics, and monitoring hooks.
+Hotel no-shows create unused room capacity, staffing inefficiency, and revenue risk. A model is useful only if it becomes part of a real operational workflow: a queue, a threshold policy, clear score semantics, and monitoring that shows whether the actions are working.
 
-This project therefore evaluates the model as an operations system rather than a standalone notebook classifier.
+For that reason, this project evaluates the model as an operations system, not as a standalone notebook classifier.
 
 ## Task Definition
 
@@ -28,18 +28,18 @@ The active stages are:
 
 ## Data
 
-The proof-of-concept uses `H1.csv` and `H2.csv` hotel booking files.
+The proof-of-concept uses the `H1.csv` and `H2.csv` hotel booking files.
 
 Known limitations:
 
-- The dataset is a final-state extract.
-- It does not contain full payment attempt logs.
-- It does not contain CRM or messaging event history.
-- It does not contain campaign exposure logs.
-- It does not contain guarantee/deposit workflow events.
-- It does not provide complete as-of snapshot histories for all post-booking fields.
+- the dataset is a final-state extract
+- it does not contain full payment attempt logs
+- it does not contain CRM or messaging event history
+- it does not contain campaign exposure logs
+- it does not contain guarantee/deposit workflow events
+- it does not provide complete as-of snapshot histories for all post-booking fields
 
-Because of these limitations, operational signal families are represented as synthetic proxies in the current proof-of-concept. These proxies validate architecture and workflow design, but they should not be treated as production evidence.
+Because of these limitations, current operational signal families are represented as synthetic proxies. They validate architecture and workflow design, but they should not be treated as production evidence.
 
 ## Leakage Controls
 
@@ -52,13 +52,15 @@ Hard exclusions:
 
 Additional rule:
 
-- final-state operational fields cannot be used for earlier scoring cutoffs unless represented as timestamped as-of features.
+- final-state operational fields cannot be used for earlier scoring cutoffs unless represented as timestamped as-of features
 
 Canceled rows are excluded from no-show training.
 
 ## Modeling Approach
 
-The active model is `catboost_with_logistic_score`.
+The active model is:
+
+- `catboost_with_logistic_score`
 
 Model flow:
 
@@ -69,11 +71,11 @@ Model flow:
 5. Calibrate CatBoost probabilities with isotonic regression.
 6. Write model, prediction, and evaluation artifacts.
 
-Logistic Regression is not a separate product candidate; it is an internal feeder signal.
+Logistic Regression is not a separate product candidate. It is an internal feeder signal.
 
 ## Validation
 
-The evaluation uses a temporal split:
+Evaluation uses a temporal split:
 
 - train: 2015-2016
 - test: 2017
@@ -82,7 +84,7 @@ Random split is avoided for headline quality claims because production scoring p
 
 ## Metrics
 
-The generated training reports include:
+Training reports include:
 
 - PR-AUC
 - ROC-AUC
@@ -96,7 +98,7 @@ The generated training reports include:
 - feature percentile summary
 - feature drift summary
 
-Metric values are generated after each training run and are stored in stage-specific artifact directories. This report intentionally does not hard-code metric values because they depend on the latest training run and configuration.
+Metric values are generated after each training run and stored in stage-specific artifact directories. This report does not hard-code metric values because they depend on the latest training run and configuration.
 
 ## Operational Threshold Policy
 
