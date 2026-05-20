@@ -358,6 +358,16 @@ def test_dataset_bundle_excludes_canceled_rows_and_forbidden_features() -> None:
     assert set(bundle.modeling_df["no_show_flag"].unique()) == {0, 1}
 
 
+def test_arrival_failure_stage_treats_canceled_and_no_show_as_positive() -> None:
+    bundle = build_dataset_bundle(_build_fixture_dataframe(), model_stage=ModelStage.ARRIVAL_FAILURE_POST_BOOKING)
+
+    assert bundle.import_summary["model_stage"] == ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value
+    assert bundle.import_summary["row_count_training"] == 4
+    assert bundle.import_summary["row_count_excluded"] == 0
+    assert bundle.import_summary["class_distribution"] == {0: 2, 1: 2}
+    assert set(bundle.modeling_df["no_show_flag"].unique()) == {0, 1}
+
+
 def test_temporal_split_uses_expected_years() -> None:
     bundle = build_dataset_bundle(_build_fixture_dataframe())
     split_bundle = temporal_train_test_split(bundle.modeling_df, stage_config=bundle.stage_config)
@@ -403,7 +413,7 @@ def test_prediction_records_can_be_persisted_to_sqlite(tmp_path: Path) -> None:
                 "model_version": "catboost_stack_test",
                 "score": 0.42,
                 "risk_class": "low",
-                "threshold_used": 0.90,
+                "threshold_used": 0.40,
                 "scoring_run_id": "test-run",
                 "scored_at": "2026-04-12T00:00:00+00:00",
                 "model_stage": ModelStage.BOOKING_TIME.value,

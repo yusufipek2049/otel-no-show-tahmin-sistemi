@@ -7,9 +7,9 @@ type AppShellProps = {
 
 const navigation = [
   { href: "/dashboard", label: "Genel Bakış" },
-  { href: "/customer-risk", label: "Müşteri Riski" },
-  { href: "/reservation-risk", label: "Rezervasyon Riski" },
-  { href: "/reservations", label: "Rezervasyonlar" },
+  { href: "/customer-risk", label: "Müşteri Ön Kontrolü" },
+  { href: "/reservation-risk", label: "Saf No-show" },
+  { href: "/reservations", label: "Arama Havuzu" },
   { href: "/reports", label: "Raporlar" },
 ] as const;
 
@@ -18,11 +18,11 @@ export function AppShell({ children, currentRoute }: AppShellProps) {
     <main className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <span className="brand-eyebrow">Otel Gelmeme Tahmin Sistemi</span>
-          <span className="brand-title">Operasyon Ekranı</span>
+          <span className="brand-eyebrow">Otel Gerçekleşmeme Riski</span>
+          <span className="brand-title">Günlük Takip Ekranı</span>
           <span className="brand-subtitle">
-            Riskli rezervasyonları izlemek, operasyon sırasını görmek ve günlük takibi tek yerden yürütmek için
-            hazırlanmış iç kullanım ekranı.
+            İptal veya no-show riski taşıyan rezervasyonları tek kuyrukta izlemek, misafir takibini planlamak ve
+            kapasite kararlarını desteklemek için hazırlanmış iç operasyon ekranı.
           </span>
         </div>
 

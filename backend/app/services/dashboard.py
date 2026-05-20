@@ -18,7 +18,7 @@ class DashboardService:
     def __init__(self, db: Session) -> None:
         self.repository = DashboardRepository(db)
         self.artifact_repository = ArtifactViewRepository(
-            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value / "latest"
         )
 
     def _resolve_source(self) -> tuple[str, str, bool]:

@@ -23,11 +23,11 @@ class ReportsService:
     def __init__(self, db: Session) -> None:
         self.repository = ReportsRepository(db)
         self.artifact_repository = ArtifactViewRepository(
-            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value / "latest"
         )
 
     def _artifact_repository_for_stage(self, stage: str | None) -> ArtifactViewRepository:
-        resolved_stage = stage or ModelStage.RESERVATION_POST_BOOKING.value
+        resolved_stage = stage or ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value
         if resolved_stage == ModelStage.BOOKING_TIME.value:
             return ArtifactViewRepository(DEFAULT_ARTIFACTS_ROOT / "latest")
         return ArtifactViewRepository(DEFAULT_ARTIFACTS_ROOT / resolved_stage / "latest")
@@ -53,9 +53,9 @@ class ReportsService:
     def get_benchmark_report(self, stage: str | None = None) -> BenchmarkReportResponse:
         artifact_repository = self._artifact_repository_for_stage(stage)
         if artifact_repository.exists():
-            logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.RESERVATION_POST_BOOKING.value, source="artifact_fallback"))
+            logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value, source="artifact_fallback"))
             return BenchmarkReportResponse.model_validate(artifact_repository.get_benchmark_report())
-        logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.RESERVATION_POST_BOOKING.value, source="database_bootstrap"))
+        logger.info(log_event("benchmark_report_requested", stage=stage or ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value, source="database_bootstrap"))
         return BenchmarkReportResponse.model_validate(self.repository.get_bootstrap_benchmark_report())
 
     def get_operations_summary(self) -> OperationsSummaryResponse:

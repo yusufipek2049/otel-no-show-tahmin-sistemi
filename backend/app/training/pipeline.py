@@ -81,7 +81,7 @@ def _build_logistic_pipeline(stage_config: ModelStageConfig) -> Pipeline:
     )
     model = LogisticRegression(
         solver="saga",
-        max_iter=4000,
+        max_iter=8000,
         class_weight="balanced",
         random_state=42,
     )
@@ -160,7 +160,7 @@ def _train_catboost(
         loss_function="Logloss",
         eval_metric="PRAUC",
         auto_class_weights="Balanced",
-        iterations=250,
+        iterations=400,
         learning_rate=0.05,
         depth=6,
         random_seed=42,
@@ -208,7 +208,7 @@ def _train_catboost_oof_predictions(split_bundle: TemporalSplitBundle, stage_con
                 loss_function="Logloss",
                 eval_metric="PRAUC",
                 auto_class_weights="Balanced",
-                iterations=250,
+                iterations=400,
                 learning_rate=0.05,
                 depth=6,
                 random_seed=42,

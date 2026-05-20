@@ -84,7 +84,7 @@ EXCLUDED_INTERNAL_COLUMNS = [
 ]
 
 FEATURE_SET_VERSION = "booking_time_v1"
-ACTION_THRESHOLD = 0.90
+ACTION_THRESHOLD = 0.40
 RISK_CLASS_BANDS = (
     # Edit this tuple to change no-show risk score labeling.
     # score is the raw no-show probability, so higher scores mean higher risk.
@@ -95,7 +95,7 @@ RISK_CLASS_BANDS = (
 )
 TRAIN_YEARS = (2015, 2016)
 TEST_YEARS = (2017,)
-THRESHOLDS = (0.50, 0.67, 0.80, 0.90, 0.95)
+THRESHOLDS = (0.40, 0.50, 0.60, 0.67, 0.80, 0.90, 0.95)
 TOP_K_VALUES = (25, 50, 100)
 TOP_PERCENT_VALUES = (0.05, 0.10)
 CALIBRATION_BIN_COUNT = 10

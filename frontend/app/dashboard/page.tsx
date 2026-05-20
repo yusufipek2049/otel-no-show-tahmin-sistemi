@@ -8,7 +8,7 @@ import { RiskBadge } from "@/components/risk-badge";
 import { getBenchmarkReport, getDashboardSummary } from "@/lib/api";
 import { formatDataSourceLabel, formatPropertyLabel } from "@/lib/presentation";
 
-const DEFAULT_ACTION_THRESHOLD = 0.9;
+const DEFAULT_ACTION_THRESHOLD = 0.4;
 
 export default async function DashboardPage() {
   const [summary, report] = await Promise.all([getDashboardSummary(), getBenchmarkReport()]);
@@ -19,85 +19,79 @@ export default async function DashboardPage() {
   const actionThreshold = report.selected_threshold ?? DEFAULT_ACTION_THRESHOLD;
   const thresholdSnapshot =
     thresholdRows.find((row) => Math.abs(row.threshold - actionThreshold) < 0.0001) ?? thresholdRows[0];
+  const callPoolSize = thresholdSnapshot?.actioned_count ?? summary.items.length;
+  const top100 = topKRows.find((row) => row.segment === "top_100");
 
   return (
     <AppShell currentRoute="/dashboard">
       <div className="page-grid">
         <PageHeader
           title="Operasyon Özeti"
-          description="Güncel risk sinyalleri, skorlama yoğunluğu ve manuel inceleme sırasındaki rezervasyonlar."
+          description="Bugün aranacak veya kontrol edilecek rezervasyon havuzu. Amaç teknik skoru göstermek değil, resepsiyon ve rezervasyon ekibinin sıradaki işi net görmesi."
           badges={[
-            "İç operasyon ekranı",
-            `${summary.items.length} riskli kayıt`,
+            "Günlük takip",
+            `İlk ${summary.items.length} riskli kayıt`,
             formatDataSourceLabel(summary.data_source),
           ]}
         />
 
         <section className="metric-grid">
           <MetricCard label="Toplam rezervasyon" value={summary.kpis.total_reservations.toString()} />
-          <MetricCard label="Yüksek risk" value={summary.kpis.high_risk_reservations.toString()} />
-          <MetricCard label="Orta risk" value={summary.kpis.medium_risk_reservations.toString()} />
-          <MetricCard label="Açık aksiyon" value={summary.kpis.action_pending_count.toString()} />
+          <MetricCard label="Takip havuzu" value={callPoolSize.toString()} hint="Takip sınırının üstündeki kayıtlar" />
+          <MetricCard label="Yüksek takip önceliği" value={summary.kpis.high_risk_reservations.toString()} />
+          <MetricCard label="Orta takip önceliği" value={summary.kpis.medium_risk_reservations.toString()} />
+          <MetricCard label="Açık takip" value={summary.kpis.action_pending_count.toString()} />
           <MetricCard label="Tamamlanan" value={summary.kpis.action_completed_count.toString()} />
           <MetricCard label="Takip gerekli" value={summary.kpis.action_follow_up_count.toString()} />
-          <MetricCard
-            label="Son skor durumu"
-            value={summary.kpis.latest_scored_at ? "Hazır" : "Bekleniyor"}
-            hint={summary.kpis.latest_scored_at ?? "Henüz skorlama yapılmadı"}
-          />
         </section>
 
         <div className="grid-two">
-          <PanelCard title="Aksiyon Özeti" subtitle="Güncel eşik ve operasyon kuyruğundan türetilen kısa görünüm.">
+          <PanelCard title="Bugünkü Arama Planı" subtitle="Kuyruk büyüklüğü ve beklenen isabet oranı.">
             <div className="summary-band">
               <div className="summary-cell">
-                Eşik
-                <strong>{actionThreshold.toFixed(2)}</strong>
+                Aranacak havuz
+                <strong>{callPoolSize}</strong>
               </div>
               <div className="summary-cell">
-                Eşikte kesinlik
+                Takip isabeti
                 <strong>{thresholdSnapshot ? `${(thresholdSnapshot.precision * 100).toFixed(1)}%` : "-"}</strong>
               </div>
               <div className="summary-cell">
-                Eşikte duyarlılık
+                Sorunlu rezervasyon yakalama
                 <strong>{thresholdSnapshot ? `${(thresholdSnapshot.recall * 100).toFixed(1)}%` : "-"}</strong>
               </div>
               <div className="summary-cell">
-                İlk 50'de yakalama
-                <strong>{top50 ? `${(top50.recall * 100).toFixed(1)}%` : "-"}</strong>
+                İlk 100 kayıtta
+                <strong>{top100 ? `${top100.captured_no_show} kayıt` : "-"}</strong>
               </div>
             </div>
           </PanelCard>
 
-          <PanelCard title="Operasyon Notu" subtitle="Karar desteği için kısa açıklama.">
+          <PanelCard title="Ekip Notu" subtitle="Takip sırasında kullanılacak sade yorum.">
             <div className="stack">
               <p className="subtle">
-                {report.recommendation_reason ??
-                  "Henüz değerlendirme çıktısı yok. Eğitim hattı çalıştığında bu alan otomatik olarak dolacak."}
+                Bu kuyruk, iptal veya no-show ihtimali yüksek rezervasyonları önce aramak için hazırlanır. İlk sıradaki
+                kayıtlar için varış teyidi, ödeme/garanti kontrolü ve gerekirse depozito takibi yapılmalıdır.
               </p>
               <div className="summary-band">
                 <div className="summary-cell">
-                  Skorlama kaynağı
-                  <strong>{formatDataSourceLabel(summary.data_source)}</strong>
+                  Liste durumu
+                  <strong>{summary.kpis.latest_scored_at ? "Güncel" : "Bekleniyor"}</strong>
                 </div>
                 <div className="summary-cell">
-                  Skorlama modu
-                  <strong>{summary.scoring_status}</strong>
+                  Kayıt modu
+                  <strong>{summary.action_support_enabled ? "Takip kaydı açılabilir" : "Sadece görüntüleme"}</strong>
                 </div>
                 <div className="summary-cell">
-                  Aksiyon akışı
-                  <strong>{summary.action_support_enabled ? "Yazılabilir" : "Read-only"}</strong>
+                  Son güncelleme
+                  <strong>{summary.kpis.latest_scored_at ? new Date(summary.kpis.latest_scored_at).toLocaleDateString("tr-TR") : "-"}</strong>
                 </div>
-              </div>
-              <div className="section-note">
-                <span className="tag">Not</span>
-                <span className="mono">Bu ekranda model adı gösterilmez.</span>
               </div>
             </div>
           </PanelCard>
         </div>
 
-        <PanelCard title="Son Riskli Rezervasyonlar" subtitle="Her rezervasyon için son skor kaydına göre listelenir.">
+        <PanelCard title="Aranacak İlk Rezervasyonlar" subtitle="İptal veya no-show riski en yüksek kayıtlar önce listelenir.">
           {summary.items.length === 0 ? (
             <div className="empty-state">
               Henüz riskli kayıt görünmüyor. Tahmin çıktıları hazır olduğunda bu alan otomatik olarak dolacak.
@@ -111,7 +105,7 @@ export default async function DashboardPage() {
                   <th>Giriş</th>
                   <th>Kanal</th>
                   <th>Risk</th>
-                  <th>Skor</th>
+                  <th>Öncelik puanı</th>
                   <th className="table-actions">Detay</th>
                 </tr>
               </thead>

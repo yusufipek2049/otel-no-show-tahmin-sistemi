@@ -73,7 +73,7 @@ def _write_artifact_fixture(root: Path) -> None:
                 "model_version": "catboost_stack_fixture",
                 "score": 0.91,
                 "risk_class": "high",
-                "threshold_used": 0.90,
+                "threshold_used": 0.40,
                 "scoring_run_id": "fixture-run",
                 "scored_at": "2026-04-12T00:00:00+00:00",
             },
@@ -89,7 +89,7 @@ def _write_artifact_fixture(root: Path) -> None:
                 "model_version": "catboost_stack_fixture",
                 "score": 0.22,
                 "risk_class": "low",
-                "threshold_used": 0.90,
+                "threshold_used": 0.40,
                 "scoring_run_id": "fixture-run",
                 "scored_at": "2026-04-12T00:00:00+00:00",
             },
@@ -108,7 +108,7 @@ def _write_artifact_fixture(root: Path) -> None:
                 "recall": 0.80,
                 "f1": 0.53,
                 "brier_score": 0.19,
-                "threshold": 0.90,
+                "threshold": 0.40,
             }
         ]
     )
@@ -116,8 +116,9 @@ def _write_artifact_fixture(root: Path) -> None:
 
     pd.DataFrame(
         [
-            {"threshold": 0.90, "precision": 0.40, "recall": 0.80, "f1": 0.53, "actioned_count": 1},
+            {"threshold": 0.40, "precision": 0.05, "recall": 0.60, "f1": 0.09, "actioned_count": 1},
             {"threshold": 0.50, "precision": 0.05, "recall": 0.60, "f1": 0.09, "actioned_count": 1},
+            {"threshold": 0.90, "precision": 0.40, "recall": 0.80, "f1": 0.53, "actioned_count": 1},
         ]
     ).to_csv(root / "reports" / "catboost_with_logistic_score_threshold_metrics.csv", index=False)
 
@@ -130,7 +131,7 @@ def _write_artifact_fixture(root: Path) -> None:
 
     summary = {
         "recommended_model": "catboost_with_logistic_score",
-        "selected_threshold": 0.90,
+        "selected_threshold": 0.40,
         "models": {
             "catboost_with_logistic_score": {
                 "model_version": "catboost_stack_fixture",
@@ -182,7 +183,7 @@ def test_artifact_repository_builds_report_payload(tmp_path: Path) -> None:
 
     assert report["recommended_model"] == "catboost_with_logistic_score"
     assert report["comparison"][0]["pr_auc"] == 0.09
-    assert report["threshold_tables"]["catboost_with_logistic_score"][0]["threshold"] == 0.90
+    assert report["threshold_tables"]["catboost_with_logistic_score"][0]["threshold"] == 0.40
     assert report["top_k_tables"]["catboost_with_logistic_score"][0]["segment"] == "top_25"
 
 

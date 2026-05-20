@@ -103,17 +103,26 @@ def normalize_and_map_reservations(raw_df: pd.DataFrame, stage_config: ModelStag
     clean_df["reservation_status"] = clean_df["ReservationStatus"]
     clean_df["reservation_status_date"] = clean_df["ReservationStatusDate"].dt.date
     clean_df["is_canceled"] = clean_df["IsCanceled"].fillna(0).astype("Int64")
-    clean_df["no_show_flag"] = np.where(
-        clean_df["reservation_status"] == "No-Show",
-        1,
-        np.where(clean_df["reservation_status"] == "Check-Out", 0, pd.NA),
-    )
-    clean_df["excluded_from_training"] = ~clean_df["reservation_status"].isin(["No-Show", "Check-Out"])
-    clean_df["exclusion_reason"] = np.where(
-        clean_df["reservation_status"] == "Canceled",
-        "canceled_status",
-        np.where(clean_df["excluded_from_training"], "unsupported_status", pd.NA),
-    )
+    if stage_config.stage == ModelStage.ARRIVAL_FAILURE_POST_BOOKING:
+        clean_df["no_show_flag"] = np.where(
+            clean_df["reservation_status"].isin(["Canceled", "No-Show"]),
+            1,
+            np.where(clean_df["reservation_status"] == "Check-Out", 0, pd.NA),
+        )
+        clean_df["excluded_from_training"] = ~clean_df["reservation_status"].isin(["Canceled", "No-Show", "Check-Out"])
+        clean_df["exclusion_reason"] = np.where(clean_df["excluded_from_training"], "unsupported_status", pd.NA)
+    else:
+        clean_df["no_show_flag"] = np.where(
+            clean_df["reservation_status"] == "No-Show",
+            1,
+            np.where(clean_df["reservation_status"] == "Check-Out", 0, pd.NA),
+        )
+        clean_df["excluded_from_training"] = ~clean_df["reservation_status"].isin(["No-Show", "Check-Out"])
+        clean_df["exclusion_reason"] = np.where(
+            clean_df["reservation_status"] == "Canceled",
+            "canceled_status",
+            np.where(clean_df["excluded_from_training"], "unsupported_status", pd.NA),
+        )
 
     clean_df["lead_time_days"] = clean_df["LeadTime"]
     clean_df["arrival_year"] = clean_df["ArrivalDateYear"]

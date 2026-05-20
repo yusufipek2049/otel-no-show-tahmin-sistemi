@@ -25,6 +25,7 @@ class ModelStage(str, Enum):
     CUSTOMER_PRE_RESERVATION = "customer_pre_reservation"
     BOOKING_TIME = "booking_time"
     RESERVATION_POST_BOOKING = "reservation_post_booking"
+    ARRIVAL_FAILURE_POST_BOOKING = "arrival_failure_post_booking"
     POST_BOOKING_DAY_1 = "post_booking_day_1"
     POST_BOOKING_DAY_2 = "post_booking_day_2"
     POST_BOOKING_DAY_3 = "post_booking_day_3"
@@ -288,6 +289,16 @@ RESERVATION_POST_BOOKING_POLICY = StageFeaturePolicy(
     excluded_internal_columns=tuple(EXCLUDED_INTERNAL_COLUMNS),
 )
 
+ARRIVAL_FAILURE_POST_BOOKING_POLICY = StageFeaturePolicy(
+    feature_set_version="arrival_failure_post_booking_v1",
+    base_feature_columns=RESERVATION_POST_BOOKING_BASE_FEATURE_COLUMNS,
+    engineered_feature_columns=RESERVATION_POST_BOOKING_ENGINEERED_FEATURE_COLUMNS,
+    numeric_feature_columns=RESERVATION_POST_BOOKING_NUMERIC_FEATURE_COLUMNS,
+    categorical_feature_columns=RESERVATION_POST_BOOKING_CATEGORICAL_FEATURE_COLUMNS,
+    excluded_source_columns=tuple(EXCLUDED_SOURCE_COLUMNS),
+    excluded_internal_columns=tuple(EXCLUDED_INTERNAL_COLUMNS),
+)
+
 POST_BOOKING_FEATURE_POLICIES = {
     stage: StageFeaturePolicy(
         feature_set_version=f"{stage.value}_v1",
@@ -330,6 +341,14 @@ MODEL_STAGE_CONFIGS = {
         split_year_column="arrival_year",
         snapshot_day_offset=1,
         feature_policy=RESERVATION_POST_BOOKING_POLICY,
+    ),
+    ModelStage.ARRIVAL_FAILURE_POST_BOOKING: ModelStageConfig(
+        stage=ModelStage.ARRIVAL_FAILURE_POST_BOOKING,
+        description="Reservation-level arrival failure model where canceled and no-show outcomes are positive.",
+        requires_snapshot_data=False,
+        split_year_column="arrival_year",
+        snapshot_day_offset=1,
+        feature_policy=ARRIVAL_FAILURE_POST_BOOKING_POLICY,
     ),
     ModelStage.POST_BOOKING_DAY_1: ModelStageConfig(
         stage=ModelStage.POST_BOOKING_DAY_1,

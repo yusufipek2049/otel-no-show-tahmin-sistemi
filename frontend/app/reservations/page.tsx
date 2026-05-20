@@ -25,12 +25,12 @@ export default async function ReservationsPage({ searchParams }: ReservationsPag
     <AppShell currentRoute="/reservations">
       <div className="page-grid">
         <PageHeader
-          title="Rezervasyonlar"
-          description="Manuel inceleme, kanal takibi ve günlük operasyon sırası için filtrelenebilir çalışma listesi."
-          badges={["Filtrelenebilir kuyruk", `${reservations.total} kayıt görüntüleniyor`, "Detay görünümü hazır"]}
+          title="Arama Havuzu"
+          description="Rezervasyon ekibinin arayacağı, mesaj göndereceği veya garanti kontrolü yapacağı kayıtlar."
+          badges={["Filtrelenebilir liste", `${reservations.total} kayıt`, "Detay hazır"]}
         />
 
-        <PanelCard title="Filtreler" subtitle="Sayfa filtreleri doğrudan API sorgu parametrelerine bağlanır.">
+        <PanelCard title="Listeyi Daralt" subtitle="Ekip günlük iş yüküne göre otel, kanal, risk ve giriş tarihi seçebilir.">
           <form className="filters" method="get">
             <div className="field">
               <label htmlFor="property_id">Otel</label>
@@ -100,14 +100,14 @@ export default async function ReservationsPage({ searchParams }: ReservationsPag
           </form>
         </PanelCard>
 
-        <PanelCard title="Kuyruk Özeti" subtitle="Operasyon ekranında yalnızca son skorlanan rezervasyonlar gösterilir.">
+        <PanelCard title="Havuz Özeti" subtitle="Seçili filtrelerle oluşan takip listesi.">
           <div className="summary-band">
             <div className="summary-cell">
-              Görünen kayıt
+              Havuzdaki kayıt
               <strong>{reservations.total}</strong>
             </div>
             <div className="summary-cell">
-              Risk seçenekleri
+              Öncelik seçenekleri
               <strong>{reservations.filters.risk_classes.map((riskClass) => formatRiskLabel(riskClass)).join(", ")}</strong>
             </div>
             <div className="summary-cell">
@@ -119,7 +119,7 @@ export default async function ReservationsPage({ searchParams }: ReservationsPag
           </div>
         </PanelCard>
 
-        <PanelCard title="Çalışma Kuyruğu" subtitle="Rezervasyon satırları detay görünümü ve günlük takip için hazırdır.">
+        <PanelCard title="Arama Listesi" subtitle="Önceliği yüksek kayıtları üstten başlayarak kontrol edin.">
           {reservations.items.length === 0 ? (
             <div className="empty-state">
               Seçili filtrelerle eşleşen rezervasyon bulunamadı. Veri aktarımı ve tahminler geldikçe bu liste
@@ -134,8 +134,8 @@ export default async function ReservationsPage({ searchParams }: ReservationsPag
                   <th>Giriş</th>
                   <th>Kanal</th>
                   <th>Müşteri tipi</th>
-                  <th>Risk</th>
-                  <th>Skor</th>
+                  <th>Öncelik</th>
+                  <th>Puan</th>
                   <th className="table-actions">Detay</th>
                 </tr>
               </thead>
@@ -157,7 +157,7 @@ export default async function ReservationsPage({ searchParams }: ReservationsPag
                     <td className="table-score">{item.score?.toFixed(3) ?? "-"}</td>
                     <td className="table-actions">
                       <Link className="table-link" href={`/reservations/${item.reservation_id}`}>
-                        Gör
+                        Aç
                       </Link>
                     </td>
                   </tr>

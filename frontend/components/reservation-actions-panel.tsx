@@ -16,8 +16,8 @@ type ReservationActionsPanelProps = {
 const ACTION_TYPE_OPTIONS = [
   { value: "call_guest", label: "Misafiri ara" },
   { value: "send_message", label: "Mesaj gönder" },
-  { value: "request_deposit", label: "Depozito iste" },
-  { value: "manual_review", label: "Manuel inceleme" },
+  { value: "request_deposit", label: "Depozito veya garanti iste" },
+  { value: "manual_review", label: "Yöneticiye bırak" },
 ];
 
 export function ReservationActionsPanel({
@@ -57,9 +57,9 @@ export function ReservationActionsPanel({
         });
         setActions((current) => [created, ...current]);
         setActionNote("");
-        setSuccess("Aksiyon kaydedildi.");
+        setSuccess("Takip kaydı eklendi.");
       } catch (createError) {
-        setError(createError instanceof Error ? createError.message : "Aksiyon kaydedilemedi.");
+        setError(createError instanceof Error ? createError.message : "Takip kaydı eklenemedi.");
       }
     });
   }
@@ -72,9 +72,9 @@ export function ReservationActionsPanel({
       try {
         const updated = await updateReservationAction(actionId, { action_status: actionStatus });
         setActions((current) => current.map((action) => (action.id === updated.id ? updated : action)));
-        setSuccess("Aksiyon durumu güncellendi.");
+        setSuccess("Takip durumu güncellendi.");
       } catch (updateError) {
-        setError(updateError instanceof Error ? updateError.message : "Aksiyon güncellenemedi.");
+        setError(updateError instanceof Error ? updateError.message : "Takip kaydı güncellenemedi.");
       }
     });
   }
@@ -82,7 +82,7 @@ export function ReservationActionsPanel({
   if (!actionSupportEnabled) {
     return (
       <div className="empty-state">
-        Aksiyon akışı yalnızca DB-backed operasyon modunda açıktır. Artifact fallback modunda bu alan read-only kalır.
+        Bu demo şu an sadece görüntüleme modunda. Canlı kullanımda arama, mesaj ve takip notları burada kaydedilir.
       </div>
     );
   }
@@ -91,7 +91,7 @@ export function ReservationActionsPanel({
     <div className="stack">
       <div className="summary-band">
         <div className="summary-cell">
-          Açık aksiyon
+          Açık takip
           <strong>{pendingSummary.open}</strong>
         </div>
         <div className="summary-cell">
@@ -107,11 +107,11 @@ export function ReservationActionsPanel({
       <form className="stack" onSubmit={handleCreateAction}>
         <div className="filters">
           <div className="field">
-            <label htmlFor="acted_by">İşlemi yapan</label>
+            <label htmlFor="acted_by">Takibi yapan</label>
             <input id="acted_by" value={actedBy} onChange={(event) => setActedBy(event.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="action_type">Aksiyon tipi</label>
+            <label htmlFor="action_type">Takip türü</label>
             <select id="action_type" value={actionType} onChange={(event) => setActionType(event.target.value)}>
               {ACTION_TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -134,7 +134,7 @@ export function ReservationActionsPanel({
         </div>
         <div className="section-note">
           <button className="button" type="submit" disabled={isPending}>
-            {isPending ? "Kaydediliyor" : "Aksiyon ekle"}
+            {isPending ? "Kaydediliyor" : "Takip kaydı ekle"}
           </button>
           {error ? <span className="error-text">{error}</span> : null}
           {success ? <span className="success-text">{success}</span> : null}
@@ -142,7 +142,7 @@ export function ReservationActionsPanel({
       </form>
 
       {actions.length === 0 ? (
-        <div className="empty-state">Bu rezervasyon için henüz aksiyon kaydı yok.</div>
+        <div className="empty-state">Bu rezervasyon için henüz takip kaydı yok.</div>
       ) : (
         <div className="status-list">
           {actions.map((action) => (

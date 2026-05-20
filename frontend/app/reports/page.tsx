@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { CaptureBarChart, ChannelRiskChart, TrendLineChart } from "@/components/charts";
 import { PageHeader } from "@/components/page-header";
 import { PanelCard } from "@/components/panel-card";
 import {
@@ -37,22 +38,22 @@ export default async function ReportsPage() {
       <div className="page-grid">
         <PageHeader
           title="Raporlar"
-          description="Operasyon yönetim görünümü ve aktif model kalite çıktıları birlikte sunulur."
+          description="Gerçekleşmeme riski, kanal kırılımları, segment kırılımları ve takip havuzu birlikte sunulur."
           badges={[
             formatDataSourceLabel(operationsSummary.data_source),
-            report.selected_threshold ? `Eşik ${report.selected_threshold.toFixed(2)}` : "Eşik yok",
+            report.selected_threshold ? `Takip sınırı ${report.selected_threshold.toFixed(2)}` : "Takip sınırı yok",
             ...report.primary_metrics.map((metric) => formatMetricLabel(metric)),
           ]}
         />
 
-        <PanelCard title="Yönetim Özeti" subtitle="No-show operasyonunun ilk yönetim görünümü.">
+        <PanelCard title="Yönetim Özeti" subtitle="İptal veya no-show ile tamamlanmayan rezervasyonların yönetim görünümü.">
           <div className="summary-band">
             <div className="summary-cell">
               Toplam rezervasyon
               <strong>{operationsSummary.total_reservations}</strong>
             </div>
             <div className="summary-cell">
-              No-show oranı
+              Gerçekleşmeme oranı
               <strong>{(operationsSummary.no_show_rate * 100).toFixed(1)}%</strong>
             </div>
             <div className="summary-cell">
@@ -64,11 +65,11 @@ export default async function ReportsPage() {
               <strong>{operationsSummary.high_risk_reservations}</strong>
             </div>
             <div className="summary-cell">
-              Açık aksiyon
+              Açık takip
               <strong>{operationsSummary.action_pending_count}</strong>
             </div>
             <div className="summary-cell">
-              Tamamlanan aksiyon
+              Tamamlanan takip
               <strong>{operationsSummary.action_completed_count}</strong>
             </div>
           </div>
@@ -76,39 +77,42 @@ export default async function ReportsPage() {
         </PanelCard>
 
         <div className="grid-two">
-          <PanelCard title="No-show Trendi" subtitle="Aylık bazda no-show ve cancellation oranı.">
+          <PanelCard title="Gerçekleşmeme Trendi" subtitle="Aylık bazda gerçekleşmeme ve iptal oranı.">
             {noShowTrends.length === 0 ? (
               <div className="empty-state">Henüz trend verisi yok.</div>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Dönem</th>
-                    <th>Rezervasyon</th>
-                    <th>No-show</th>
-                    <th>İptal</th>
-                    <th>No-show oranı</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {noShowTrends.map((row) => (
-                    <tr key={row.period}>
-                      <td>{row.period}</td>
-                      <td className="table-score">{row.total_reservations}</td>
-                      <td className="table-score">{row.no_show_count}</td>
-                      <td className="table-score">{row.canceled_count}</td>
-                      <td className="table-score">{(row.no_show_rate * 100).toFixed(1)}%</td>
+              <div className="stack">
+                <TrendLineChart points={noShowTrends} />
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Dönem</th>
+                      <th>Rezervasyon</th>
+                      <th>Gerçekleşmeme</th>
+                      <th>İptal</th>
+                      <th>Gerçekleşmeme oranı</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {noShowTrends.map((row) => (
+                      <tr key={row.period}>
+                        <td>{row.period}</td>
+                        <td className="table-score">{row.total_reservations}</td>
+                        <td className="table-score">{row.no_show_count}</td>
+                        <td className="table-score">{row.canceled_count}</td>
+                        <td className="table-score">{(row.no_show_rate * 100).toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </PanelCard>
 
-          <PanelCard title="Aksiyon Etkisi" subtitle="Korelasyon seviyesinde operasyon kapsam görünümü.">
+          <PanelCard title="Takip Kapsamı" subtitle="Arama, mesaj ve garanti kontrollerinin genel görünümü.">
             <div className="summary-band">
               <div className="summary-cell">
-                Toplam aksiyon
+                Toplam takip kaydı
                 <strong>{actionEffectiveness.total_actions}</strong>
               </div>
               <div className="summary-cell">
@@ -120,7 +124,7 @@ export default async function ReportsPage() {
                 <strong>{actionEffectiveness.follow_up_actions}</strong>
               </div>
               <div className="summary-cell">
-                Aksiyonlanan yüksek risk
+                Takip açılan yüksek risk
                 <strong>{actionEffectiveness.high_risk_with_action_count}</strong>
               </div>
             </div>
@@ -129,32 +133,35 @@ export default async function ReportsPage() {
         </div>
 
         <div className="grid-two">
-          <PanelCard title="Kanal Bazlı Kırılım" subtitle="Rezervasyon kanallarında no-show yükü ve yüksek risk yoğunluğu.">
+          <PanelCard title="Kanal Bazlı Kırılım" subtitle="Rezervasyon kanallarında gerçekleşmeme yükü ve yüksek risk yoğunluğu.">
             {channelBreakdown.length === 0 ? (
               <div className="empty-state">Henüz kanal kırılımı yok.</div>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Kanal</th>
-                    <th>Rezervasyon</th>
-                    <th>Yüksek risk</th>
-                    <th>No-show oranı</th>
-                    <th>Ortalama skor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {channelBreakdown.map((row) => (
-                    <tr key={row.dimension_value}>
-                      <td>{row.dimension_value}</td>
-                      <td className="table-score">{row.total_reservations}</td>
-                      <td className="table-score">{row.high_risk_reservations}</td>
-                      <td className="table-score">{(row.no_show_rate * 100).toFixed(1)}%</td>
-                      <td className="table-score">{row.average_score?.toFixed(3) ?? "-"}</td>
+              <div className="stack">
+                <ChannelRiskChart rows={channelBreakdown} />
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Kanal</th>
+                      <th>Rezervasyon</th>
+                      <th>Yüksek risk</th>
+                      <th>Gerçekleşmeme oranı</th>
+                      <th>Ortalama puan</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {channelBreakdown.map((row) => (
+                      <tr key={row.dimension_value}>
+                        <td>{row.dimension_value}</td>
+                        <td className="table-score">{row.total_reservations}</td>
+                        <td className="table-score">{row.high_risk_reservations}</td>
+                        <td className="table-score">{(row.no_show_rate * 100).toFixed(1)}%</td>
+                        <td className="table-score">{row.average_score?.toFixed(3) ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </PanelCard>
 
@@ -167,9 +174,9 @@ export default async function ReportsPage() {
                   <tr>
                     <th>Segment</th>
                     <th>Rezervasyon</th>
-                    <th>No-show</th>
+                    <th>Gerçekleşmeme</th>
                     <th>İptal</th>
-                    <th>No-show oranı</th>
+                    <th>Gerçekleşmeme oranı</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -189,93 +196,66 @@ export default async function ReportsPage() {
         </div>
 
         <div className="grid-three">
-          <PanelCard title="Veri Bölme Stratejisi" subtitle="Proje dokümanları ve veri sızıntısına karşı güvenli modelleme planıyla uyumlu.">
-            <p className="muted">{report.split_strategy}</p>
-          </PanelCard>
-
-          <PanelCard title="Yorum" subtitle="Çıktıların kısa operasyon özeti.">
-            <div className="stack">
-              <p className="muted">{report.recommendation_reason ?? "Henüz yorum üretilecek bir değerlendirme sonucu yok."}</p>
-              <div className="section-note">
-                <span className="tag">Gizlilik</span>
-                <span className="mono">Bu ekranda model adı paylaşılmaz.</span>
+          <PanelCard title="Arama Havuzu" subtitle="Takip sınırının üstündeki kayıtlar günlük listeye girer.">
+            <div className="summary-band">
+              <div className="summary-cell">
+                Havuz büyüklüğü
+                <strong>{recommendedThresholdRows[0]?.actioned_count ?? "-"}</strong>
+              </div>
+              <div className="summary-cell">
+                Beklenen isabet
+                <strong>{recommendedThresholdRows[0] ? `${(recommendedThresholdRows[0].precision * 100).toFixed(1)}%` : "-"}</strong>
               </div>
             </div>
           </PanelCard>
 
-          <PanelCard title="Operasyon Özeti" subtitle="Karar sırasında en çok kullanılan ölçüler öne çıkarılır.">
+          <PanelCard title="Yorum" subtitle="Yönetici için kısa operasyon özeti.">
+            <div className="stack">
+              <p className="muted">
+                Liste, gerçekleşmeme riski yüksek rezervasyonları önce aramak için hazırlanır. Teknik model metrikleri
+                ekip içi değerlendirme içindir; günlük kullanımda arama havuzu ve kanal kırılımları takip edilir.
+              </p>
+            </div>
+          </PanelCard>
+
+          <PanelCard title="İlk Liste" subtitle="Sınırlı ekip zamanı varsa üst sıra izlenir.">
             <div className="summary-band">
               <div className="summary-cell">
-                İlk 50 yakalama
-                <strong>{top50 ? `${(top50.recall * 100).toFixed(1)}%` : "-"}</strong>
+                İlk 50 kayıt
+                <strong>{top50 ? `${top50.captured_no_show} sorunlu` : "-"}</strong>
               </div>
               <div className="summary-cell">
-                Eşik satırı
-                <strong>{recommendedThresholdRows.length}</strong>
+                Yakalama oranı
+                <strong>{top50 ? `${(top50.recall * 100).toFixed(1)}%` : "-"}</strong>
               </div>
             </div>
           </PanelCard>
         </div>
 
-        <PanelCard title="Model Kalite Özeti" subtitle="Aktif modelin temel performans görünümü.">
-          {report.comparison.length === 0 ? (
-            <div className="empty-state">Henüz model kalite satırı bulunmuyor.</div>
-          ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Model</th>
-                  <th>PR-AUC</th>
-                  <th>ROC-AUC</th>
-                  <th>Eşikte kesinlik</th>
-                  <th>Eşikte duyarlılık</th>
-                  <th>Eşikte F1</th>
-                  <th>Brier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.comparison.map((row, index) => (
-                  <tr key={row.model_name}>
-                    <td>{formatCandidateLabel(index)}</td>
-                    <td className="table-score">{row.pr_auc?.toFixed(3) ?? "-"}</td>
-                    <td className="table-score">{row.roc_auc?.toFixed(3) ?? "-"}</td>
-                    <td className="table-score">{row.precision?.toFixed(3) ?? "-"}</td>
-                    <td className="table-score">{row.recall?.toFixed(3) ?? "-"}</td>
-                    <td className="table-score">{row.f1?.toFixed(3) ?? "-"}</td>
-                    <td className="table-score">{row.brier_score?.toFixed(3) ?? "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </PanelCard>
-
         <div className="grid-two">
           <PanelCard
-            title="Eşik Tablosu"
-            subtitle="Tanımlı kesim noktalarındaki kesinlik, duyarlılık ve aksiyon hacmi."
+            title="Havuz Boyutu Senaryoları"
+            subtitle="Daha düşük sınır daha büyük arama listesi üretir."
           >
             {recommendedThresholdRows.length === 0 ? (
-              <div className="empty-state">Henüz eşik metriği yok.</div>
+              <div className="empty-state">Henüz takip sınırı özeti yok.</div>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Eşik</th>
-                    <th>Kesinlik</th>
-                    <th>Duyarlılık</th>
-                    <th>F1</th>
-                    <th>Aksiyona alınan</th>
+                    <th>Kesim</th>
+                    <th>Aranacak kayıt</th>
+                    <th>Beklenen isabet</th>
+                    <th>Yakalama</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recommendedThresholdRows.map((row) => (
                     <tr key={`${recommendedModel}-${row.threshold}`}>
                       <td className="table-score">{row.threshold.toFixed(2)}</td>
+                      <td className="table-score">{row.actioned_count}</td>
                       <td className="table-score">{row.precision.toFixed(3)}</td>
                       <td className="table-score">{row.recall.toFixed(3)}</td>
-                      <td className="table-score">{row.f1.toFixed(3)}</td>
-                      <td className="table-score">{row.actioned_count}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -284,39 +264,42 @@ export default async function ReportsPage() {
           </PanelCard>
 
           <PanelCard
-            title="Top-K Yakalama"
-            subtitle="Sabit kuyruk boyutları ve yüzde dilimlerinde operasyon yakalama görünümü."
+            title="Sabit Liste Senaryoları"
+            subtitle="Ekip yalnızca ilk 50, 100 veya belirli yüzdeyi arayacaksa beklenen yakalama."
           >
             {recommendedTopKRows.length === 0 ? (
-              <div className="empty-state">Henüz top-k özeti yok.</div>
+              <div className="empty-state">Henüz sabit liste özeti yok.</div>
             ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Dilim</th>
-                    <th>Seçilen</th>
-                    <th>Yakalanan gelmeme</th>
-                    <th>Toplam gelmeme</th>
-                    <th>Duyarlılık</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recommendedTopKRows.map((row) => (
-                    <tr key={`${recommendedModel}-${row.segment}`}>
-                      <td>{formatTopKSegmentLabel(row.segment)}</td>
-                      <td className="table-score">{row.selected_count}</td>
-                      <td className="table-score">{row.captured_no_show}</td>
-                      <td className="table-score">{row.total_no_show}</td>
-                      <td className="table-score">{row.recall.toFixed(3)}</td>
+              <div className="stack">
+                <CaptureBarChart rows={recommendedTopKRows} />
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Dilim</th>
+                      <th>Seçilen</th>
+                      <th>Yakalanan sorunlu</th>
+                      <th>Toplam sorunlu</th>
+                      <th>Yakalama</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recommendedTopKRows.map((row) => (
+                      <tr key={`${recommendedModel}-${row.segment}`}>
+                        <td>{formatTopKSegmentLabel(row.segment)}</td>
+                        <td className="table-score">{row.selected_count}</td>
+                        <td className="table-score">{row.captured_no_show}</td>
+                        <td className="table-score">{row.total_no_show}</td>
+                        <td className="table-score">{row.recall.toFixed(3)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </PanelCard>
         </div>
 
-        <PanelCard title="Model Durumları" subtitle="Hızlı tarama için kısa durum kartları.">
+        <PanelCard title="Teknik Ek" subtitle="Bu alan operasyon kullanımı için değil, proje değerlendirmesi içindir.">
           <div className="status-list">
             {report.models.map((model, index) => (
               <article key={model.model_name} className="status-item">

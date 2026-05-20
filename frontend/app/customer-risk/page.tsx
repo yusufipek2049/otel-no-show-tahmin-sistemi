@@ -18,31 +18,31 @@ export default async function CustomerRiskPage() {
     <AppShell currentRoute="/customer-risk">
       <div className="page-grid">
         <PageHeader
-          title="Müşteri No-show Riski"
-          description="Rezervasyon kesinleşmeden önce müşteri kimliği, geçmiş davranış, ödeme ve iletişim sinyallerinden üretilen risk görünümü."
-          badges={["customer_pre_reservation", report.selected_threshold ? `Eşik ${report.selected_threshold.toFixed(2)}` : "Eşik yok"]}
+          title="Müşteri Ön Kontrolü"
+          description="Rezervasyon kesinleşmeden önce müşterinin geçmiş davranışı, ödeme durumu ve iletişim sinyalleriyle takip önceliği verir."
+          badges={["Ön rezervasyon", report.selected_threshold ? `Takip sınırı ${report.selected_threshold.toFixed(2)}` : "Takip sınırı yok"]}
         />
 
         <section className="metric-grid">
-          <MetricCard label="Aktif model" value={report.comparison.length > 0 ? "Hazır" : "Bekleniyor"} />
-          <MetricCard label="Skor mimarisi" value={recommendedModel ? formatCandidateLabel(0) : "-"} />
-          <MetricCard label="Eşik kesinliği" value={selectedThreshold ? `${(selectedThreshold.precision * 100).toFixed(1)}%` : "-"} />
-          <MetricCard label="Eşik duyarlılığı" value={selectedThreshold ? `${(selectedThreshold.recall * 100).toFixed(1)}%` : "-"} />
+          <MetricCard label="Durum" value={report.comparison.length > 0 ? "Hazır" : "Bekleniyor"} />
+          <MetricCard label="Kullanılan yöntem" value={recommendedModel ? formatCandidateLabel(0) : "-"} />
+          <MetricCard label="Takip isabeti" value={selectedThreshold ? `${(selectedThreshold.precision * 100).toFixed(1)}%` : "-"} />
+          <MetricCard label="Sorunlu kayıt yakalama" value={selectedThreshold ? `${(selectedThreshold.recall * 100).toFixed(1)}%` : "-"} />
         </section>
 
-        <PanelCard title="Müşteri Model Durumu" subtitle="Logistic Regression skoru CatBoost modeline besleyici sinyal olarak verilir.">
+        <PanelCard title="Kalite Özeti" subtitle="Bu görünüm, müşteriyi rezervasyon kesinleşmeden önce daha dikkatli kontrol etmek için kullanılır.">
           {report.comparison.length === 0 ? (
-            <div className="empty-state">Bu stage için eğitim artifact'i henüz yok.</div>
+            <div className="empty-state">Bu görünüm için henüz eğitim çıktısı yok.</div>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Model</th>
-                  <th>PR-AUC</th>
-                  <th>ROC-AUC</th>
-                  <th>Kesinlik</th>
-                  <th>Duyarlılık</th>
-                  <th>F1</th>
+                  <th>Yöntem</th>
+                  <th>Öncelik kalitesi</th>
+                  <th>Ayrıştırma gücü</th>
+                  <th>İsabet</th>
+                  <th>Yakalama</th>
+                  <th>Denge</th>
                 </tr>
               </thead>
               <tbody>
@@ -61,7 +61,7 @@ export default async function CustomerRiskPage() {
           )}
         </PanelCard>
 
-        <PanelCard title="Model Artifact Durumu" subtitle="Müşteri düzeyi model artifact'lerinden gelen kısa durum.">
+        <PanelCard title="Teknik Durum" subtitle="İç değerlendirme için tutulan kısa model notları.">
           <div className="status-list">
             {report.models.map((model, index) => (
               <article key={model.model_name} className="status-item">

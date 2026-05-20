@@ -28,7 +28,7 @@ class ReservationService:
         self.repository = ReservationRepository(db)
         self.actions_repository = ActionsRepository(db)
         self.artifact_repository = ArtifactViewRepository(
-            DEFAULT_ARTIFACTS_ROOT / ModelStage.RESERVATION_POST_BOOKING.value / "latest"
+            DEFAULT_ARTIFACTS_ROOT / ModelStage.ARRIVAL_FAILURE_POST_BOOKING.value / "latest"
         )
 
     def _resolve_source(self) -> tuple[str, bool]:

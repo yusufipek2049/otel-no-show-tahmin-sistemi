@@ -66,7 +66,7 @@ const reservationDetailFallback: ReservationDetail = {
 };
 
 const reportFallback: BenchmarkReport = {
-  split_strategy: "Zaman bazlı bölme planlandı: erken dönemlerde eğitim, daha sonraki dönemde doğrulama.",
+  split_strategy: "Eski dönemlerle öğrenip sonraki dönemlerde kontrol eden zaman bazlı değerlendirme planlandı.",
   primary_metrics: ["pr_auc", "roc_auc", "precision", "recall", "f1", "calibration"],
   recommended_model: null,
   selected_threshold: null,
@@ -75,7 +75,7 @@ const reportFallback: BenchmarkReport = {
     {
       model_name: "catboost_with_logistic_score",
       status: "planned",
-      notes: "CatBoost, Logistic Regression skorunu besleyici feature olarak kullanacak şekilde planlandı.",
+      notes: "Eğitim çıktısı hazır olduğunda bu alanda kısa kalite özeti gösterilecek.",
       metrics: [
         { name: "pr_auc", value: null, status: "pending" },
         { name: "roc_auc", value: null, status: "pending" },
@@ -100,7 +100,7 @@ const operationsSummaryFallback: OperationsSummary = {
   action_follow_up_count: 0,
   data_source: "database_bootstrap",
   action_support_enabled: false,
-  note: "Yönetim özeti henüz hazır değil.",
+  note: "Yönetim özeti henüz hazırlanmadı.",
 };
 
 const trendFallback: TrendPoint[] = [];
@@ -116,7 +116,7 @@ const actionEffectivenessFallback: ActionEffectiveness = {
   type_breakdown: [],
   data_source: "database_bootstrap",
   action_support_enabled: false,
-  note: "Aksiyon görünümü henüz hazır değil.",
+  note: "Takip görünümü henüz hazırlanmadı.",
 };
 
 async function safeFetchJson<T>(path: string, fallback: T): Promise<T> {
@@ -204,7 +204,7 @@ export async function createReservationAction(
   });
 
   if (!response.ok) {
-    throw new Error("Aksiyon kaydedilemedi.");
+    throw new Error("Takip kaydı eklenemedi.");
   }
 
   return (await response.json()) as ReservationAction;
@@ -226,7 +226,7 @@ export async function updateReservationAction(
   });
 
   if (!response.ok) {
-    throw new Error("Aksiyon güncellenemedi.");
+    throw new Error("Takip kaydı güncellenemedi.");
   }
 
   return (await response.json()) as ReservationAction;

@@ -14,13 +14,13 @@ const riskLabelMap: Record<string, string> = {
 };
 
 const metricLabelMap: Record<string, string> = {
-  pr_auc: "PR-AUC",
-  roc_auc: "ROC-AUC",
-  precision: "Kesinlik",
-  recall: "Duyarlılık",
+  pr_auc: "Öncelik kalitesi",
+  roc_auc: "Ayrıştırma gücü",
+  precision: "İsabet",
+  recall: "Yakalama",
   f1: "F1",
-  calibration: "Kalibrasyon",
-  brier_score: "Brier skoru",
+  calibration: "Olasılık uyumu",
+  brier_score: "Olasılık hatası",
 };
 
 const statusLabelMap: Record<string, string> = {
@@ -31,22 +31,22 @@ const statusLabelMap: Record<string, string> = {
 };
 
 const dataSourceLabelMap: Record<string, string> = {
-  database_prediction_store: "DB prediction store",
-  artifact_fallback: "Artifact fallback",
-  database_bootstrap: "Bootstrap",
+  database_prediction_store: "Canlı kayıt",
+  artifact_fallback: "Demo verisi",
+  database_bootstrap: "Hazırlanıyor",
 };
 
 const actionStatusLabelMap: Record<string, string> = {
   open: "Açık",
   completed: "Tamamlandı",
-  follow_up: "Takip gerekli",
+  follow_up: "Tekrar aranacak",
 };
 
 const actionTypeLabelMap: Record<string, string> = {
   call_guest: "Misafiri ara",
   send_message: "Mesaj gönder",
-  request_deposit: "Depozito iste",
-  manual_review: "Manuel inceleme",
+  request_deposit: "Depozito veya garanti iste",
+  manual_review: "Yöneticiye bırak",
 };
 
 export function formatPropertyLabel(propertyId?: string | null): string {
@@ -95,7 +95,7 @@ export function formatTopKSegmentLabel(segment: string): string {
 }
 
 export function formatCandidateLabel(index: number): string {
-  return index === 0 ? "Aktif model" : `Aday ${index + 1}`;
+  return index === 0 ? "Ana yöntem" : `Karşılaştırma ${index + 1}`;
 }
 
 export function formatStatusLabel(status: string): string {

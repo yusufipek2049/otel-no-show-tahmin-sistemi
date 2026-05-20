@@ -20,32 +20,32 @@ export default async function ReservationRiskPage() {
     <AppShell currentRoute="/reservation-risk">
       <div className="page-grid">
         <PageHeader
-          title="Rezervasyon No-show Riski"
-          description="Rezervasyon oluştuktan sonra ödeme denemeleri, iletişim yanıtları, kampanya ve garanti/depozito sinyalleriyle güncellenen risk görünümü."
-          badges={["reservation_post_booking", report.selected_threshold ? `Eşik ${report.selected_threshold.toFixed(2)}` : "Eşik yok"]}
+          title="Saf No-show Görünümü"
+          description="İptalleri dışarıda bırakan dar takip görünümü. Ana operasyon havuzundan farklı olarak sadece gelmeyen rezervasyonlara odaklanır."
+          badges={["Sadece no-show", report.selected_threshold ? `Takip sınırı ${report.selected_threshold.toFixed(2)}` : "Takip sınırı yok"]}
         />
 
         <section className="metric-grid">
-          <MetricCard label="Aktif model" value={report.comparison.length > 0 ? "Hazır" : "Bekleniyor"} />
-          <MetricCard label="Eşik kesinliği" value={selectedThreshold ? `${(selectedThreshold.precision * 100).toFixed(1)}%` : "-"} />
-          <MetricCard label="Eşik duyarlılığı" value={selectedThreshold ? `${(selectedThreshold.recall * 100).toFixed(1)}%` : "-"} />
+          <MetricCard label="Durum" value={report.comparison.length > 0 ? "Hazır" : "Bekleniyor"} />
+          <MetricCard label="Takip isabeti" value={selectedThreshold ? `${(selectedThreshold.precision * 100).toFixed(1)}%` : "-"} />
+          <MetricCard label="No-show yakalama" value={selectedThreshold ? `${(selectedThreshold.recall * 100).toFixed(1)}%` : "-"} />
           <MetricCard label="İlk 50 yakalama" value={top50 ? `${(top50.recall * 100).toFixed(1)}%` : "-"} />
         </section>
 
-        <PanelCard title="Rezervasyon Model Durumu" subtitle="CatBoost, logistic regression skorunu ek operasyonel sinyal olarak kullanır.">
+        <PanelCard title="Dar Hedef Özeti" subtitle="Bu ekran teknik kontrol içindir; günlük takipte ana gerçekleşmeme havuzu kullanılmalıdır.">
           {report.comparison.length === 0 ? (
-            <div className="empty-state">Bu stage için eğitim artifact'i henüz yok.</div>
+            <div className="empty-state">Bu görünüm için henüz eğitim çıktısı yok.</div>
           ) : (
             <table className="table">
               <thead>
                 <tr>
-                  <th>Model</th>
-                  <th>PR-AUC</th>
-                  <th>ROC-AUC</th>
-                  <th>Kesinlik</th>
-                  <th>Duyarlılık</th>
-                  <th>F1</th>
-                  <th>Brier</th>
+                  <th>Yöntem</th>
+                  <th>Öncelik kalitesi</th>
+                  <th>Ayrıştırma gücü</th>
+                  <th>İsabet</th>
+                  <th>Yakalama</th>
+                  <th>Denge</th>
+                  <th>Olasılık hatası</th>
                 </tr>
               </thead>
               <tbody>
@@ -66,17 +66,17 @@ export default async function ReservationRiskPage() {
         </PanelCard>
 
         <div className="grid-two">
-          <PanelCard title="Eşik Tablosu" subtitle="Rezervasyon aksiyon eşiği 0.90 olarak uygulanır.">
+          <PanelCard title="Takip Sınırı Tablosu" subtitle="Sınır düştükçe daha çok rezervasyon listeye girer; isabet ve yakalama birlikte okunmalıdır.">
             {thresholdRows.length === 0 ? (
-              <div className="empty-state">Henüz eşik metriği yok.</div>
+              <div className="empty-state">Henüz takip sınırı özeti yok.</div>
             ) : (
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Eşik</th>
-                    <th>Kesinlik</th>
-                    <th>Duyarlılık</th>
-                    <th>Aksiyona alınan</th>
+                    <th>Sınır</th>
+                    <th>İsabet</th>
+                    <th>Yakalama</th>
+                    <th>Listeye giren</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -93,9 +93,9 @@ export default async function ReservationRiskPage() {
             )}
           </PanelCard>
 
-          <PanelCard title="Top-K Yakalama" subtitle="Operasyon kuyruğu boyutuna göre yakalanan no-show oranı.">
+          <PanelCard title="Liste Boyutuna Göre Yakalama" subtitle="Arama listesi büyüdükçe yakalanan no-show oranını gösterir.">
             {topKRows.length === 0 ? (
-              <div className="empty-state">Henüz top-k metriği yok.</div>
+              <div className="empty-state">Henüz liste boyutu özeti yok.</div>
             ) : (
               <table className="table">
                 <thead>
@@ -103,7 +103,7 @@ export default async function ReservationRiskPage() {
                     <th>Dilim</th>
                     <th>Seçilen</th>
                     <th>Yakalanan</th>
-                    <th>Duyarlılık</th>
+                    <th>Yakalama</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -121,7 +121,7 @@ export default async function ReservationRiskPage() {
           </PanelCard>
         </div>
 
-        <PanelCard title="Kullanılan Sinyal Grupları" subtitle="Bu stage rezervasyon sonrası oluşan sentetik operasyonel sinyalleri içerir.">
+        <PanelCard title="Kullanılan İşaretler" subtitle="Rezervasyon sonrasında oluşan operasyonel bilgilerin ana grupları.">
           <div className="badge-row">
             {["müşteri kimliği", "ödeme başarısızlığı", "iletişim geçmişi", "son dakika davranışı", "kanal kampanyası", "garanti/depozito detayı"].map(
               (label) => (

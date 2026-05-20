@@ -455,8 +455,9 @@ class ArtifactViewRepository:
         recommendation_reason = None
         if recommended_model and recommended_model in highlight_lookup:
             row = highlight_lookup[recommended_model]
+            stage_label = "arrival failure" if summary.get("model_stage") == "arrival_failure_post_booking" else "no-show"
             recommendation_reason = (
-                f"Active calibrated no-show model loaded from latest artifact "
+                f"Active calibrated {stage_label} model loaded from latest artifact "
                 f"(F1 {row['f1']:.3f}, PR-AUC {row['pr_auc']:.3f})."
             )
 

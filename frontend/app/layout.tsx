@@ -16,8 +16,8 @@ const displayFont = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Otel Gelmeme Tahmin Sistemi",
-  description: "Rezervasyon risk incelemesi için iç operasyon arayüzü.",
+  title: "Otel Gerçekleşmeme Takip Ekranı",
+  description: "Riskli rezervasyonları arama ve takip havuzunda yöneten iç operasyon arayüzü.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

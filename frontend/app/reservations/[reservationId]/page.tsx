@@ -24,7 +24,7 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
       <div className="page-grid">
         <PageHeader
           title={`Rezervasyon #${detail.reservation_id || reservationId}`}
-          description="Son skor, yönlendirme bağlamı ve operasyon için gereken temel alanların yer aldığı detay görünümü."
+          description="Misafiri aramadan önce kontrol edilecek temel bilgiler ve önerilen takip adımı."
           badges={[
             formatPropertyLabel(detail.property_id),
             detail.distribution_channel ?? "Kanal bilinmiyor",
@@ -37,18 +37,18 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
             Rezervasyon listesine dön
           </Link>
           <span className="pill">
-            Aksiyon akışı: {detail.action_support_enabled ? "Yazılabilir" : "Read-only"}
+            Takip kaydı: {detail.action_support_enabled ? "Açık" : "Sadece görüntüleme"}
           </span>
         </div>
 
         <section className="metric-grid">
           <div className="metric-card">
-            <div className="metric-label">Son skor</div>
+            <div className="metric-label">Öncelik puanı</div>
             <div className="metric-value">{latestPrediction?.score?.toFixed(3) ?? "-"}</div>
-            <div className="muted">{latestPrediction?.scored_at ?? "Henüz skorlanmadı"}</div>
+            <div className="muted">{latestPrediction?.scored_at ?? "Henüz listeye alınmadı"}</div>
           </div>
           <div className="metric-card">
-            <div className="metric-label">Risk seviyesi</div>
+            <div className="metric-label">Takip önceliği</div>
             <div className="metric-value">
               <RiskBadge riskClass={latestPrediction?.risk_class ?? null} />
             </div>
@@ -60,7 +60,7 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
             <div className="muted">{detail.customer_type ?? "Müşteri tipi bilinmiyor"}</div>
           </div>
           <div className="metric-card">
-            <div className="metric-label">Gerçekleşen sonuç</div>
+            <div className="metric-label">Sonuç</div>
             <div className="metric-value">
               {detail.no_show_flag === null ? "Bilinmiyor" : detail.no_show_flag ? "Gelmedi" : "Konakladı"}
             </div>
@@ -72,7 +72,7 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
           </div>
         </section>
 
-        <PanelCard title="Rezervasyon Bağlamı" subtitle="Gereksiz ham alanları göstermeden sade tutuldu.">
+        <PanelCard title="Arama Öncesi Kontrol" subtitle="Misafire ulaşmadan önce görülecek kısa özet.">
           <div className="kv-grid">
             <div className="kv-card">
               <div className="kv-label">Otel</div>
@@ -102,7 +102,27 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
         </PanelCard>
 
         <div className="grid-two">
-          <PanelCard title="Operasyon İpuçları" subtitle="Temiz rezervasyon katmanından gelen güvenli bağlamsal alanlar.">
+          <PanelCard title="Önerilen Takip" subtitle="Bu kayıt için ilk temas önerisi.">
+            <div className="call-script">
+              <div>
+                <span className="tag">1</span>
+                <strong>Varış teyidi al</strong>
+                <p className="muted">Misafirin giriş tarihini ve tahmini varış saatini doğrula.</p>
+              </div>
+              <div>
+                <span className="tag">2</span>
+                <strong>Garanti durumunu kontrol et</strong>
+                <p className="muted">Depozito, ödeme tipi veya acente garantisi eksikse not düş.</p>
+              </div>
+              <div>
+                <span className="tag">3</span>
+                <strong>Sonraki adımı kaydet</strong>
+                <p className="muted">Ulaşıldı, mesaj gönderildi veya tekrar aranacak bilgisini takip kaydı olarak ekle.</p>
+              </div>
+            </div>
+          </PanelCard>
+
+          <PanelCard title="Operasyon İpuçları" subtitle="Konuşma sırasında yardımcı olacak kısa bilgiler.">
             <div className="kv-grid">
               <div className="kv-card">
                 <div className="kv-label">Pansiyon tipi</div>
@@ -129,18 +149,18 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
             </div>
           </PanelCard>
 
-          <PanelCard title="Skorlama Özeti" subtitle="Yalnızca son skor kaydına ait operasyonel metaveri gösterilir.">
+          <PanelCard title="Liste Bilgisi" subtitle="Kayıt hangi öncelikle kuyruğa alındı?">
             <div className="kv-grid">
               <div className="kv-card">
-                <div className="kv-label">Skor zamanı</div>
+                <div className="kv-label">Listeye alınma zamanı</div>
                 <div className="kv-value">{latestPrediction?.scored_at ?? "-"}</div>
               </div>
               <div className="kv-card">
-                <div className="kv-label">Skor</div>
+                <div className="kv-label">Öncelik puanı</div>
                 <div className="kv-value">{latestPrediction?.score?.toFixed(3) ?? "-"}</div>
               </div>
               <div className="kv-card">
-                <div className="kv-label">Risk etiketi</div>
+                <div className="kv-label">Takip etiketi</div>
                 <div className="kv-value">{latestPrediction?.risk_class ? <RiskBadge riskClass={latestPrediction.risk_class} /> : "-"}</div>
               </div>
               <div className="kv-card">
@@ -151,7 +171,7 @@ export default async function ReservationDetailPage({ params }: ReservationDetai
           </PanelCard>
         </div>
 
-        <PanelCard title="Aksiyon Geçmişi" subtitle="Manuel müdahale, takip ve kapanış akışı bu panelde tutulur.">
+        <PanelCard title="Takip Geçmişi" subtitle="Arama, mesaj, garanti kontrolü ve kapanış bilgisi bu panelde tutulur.">
           <ReservationActionsPanel
             reservationId={detail.reservation_id}
             actionSupportEnabled={detail.action_support_enabled}
